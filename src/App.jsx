@@ -14,29 +14,20 @@ import { saveToNativeStorage, loadFromNativeStorage, downloadBackup, handleFileI
 import LiveBackground from './components/LiveBackground';
 import WeeklyStats from './components/WeeklyStats';
 import StudyCharts from './components/StudyCharts';
+import CountdownTimer from './components/CountdownTimer';
+import { updateWidget } from './utils/widgetBridge';
 
 // Default State Constants - defined outside component to avoid recreation
 const DEFAULT_SUBJECTS = [
-    { name: 'Accounts', planned: '150', actual: '0', kpi: 'N' },
-    { name: 'Microeconomics', planned: '60', actual: '0', kpi: 'N' },
-    { name: 'PPM', planned: '50', actual: '0', kpi: 'N' },
-    { name: 'Entrepreneurship', planned: '40', actual: '0', kpi: 'N' },
-    { name: 'English', planned: '30', actual: '0', kpi: 'N' },
-    { name: 'CVAC', planned: '30', actual: '0', kpi: 'N' },
+    { id: 1, name: 'New Subject', planned: '60', actual: '0', kpi: 'N', time: '', reminder: false },
 ];
 
 const DEFAULT_CHECKLIST = [
-    { id: 1, label: 'Accounts: 5–6 problems solved', checked: false },
-    { id: 2, label: 'Micro: 2 numericals / diagrams', checked: false },
-    { id: 3, label: 'PPM: 1–2 exam answers', checked: false },
-    { id: 4, label: 'Entrepreneurship: 1 topic / case', checked: false },
-    { id: 5, label: 'English: 1 passage / writing', checked: false },
-    { id: 6, label: 'CVAC: 1 task / MCQs', checked: false },
+    { id: 1, label: 'Add your first checklist item here...', checked: false },
 ];
 
 const DEFAULT_QUALITY = [
-    { id: 1, label: 'Can explain Accounts work without notes', checked: false },
-    { id: 2, label: 'Can explain Micro work without notes', checked: false },
+    { id: 1, label: 'Did you understand the core concepts?', checked: false },
 ];
 
 const DEFAULT_ERRORS = [
@@ -205,6 +196,9 @@ function App() {
             });
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
+
+            // Update Widget
+            updateWidget(subjects);
         } catch (error) {
             console.error('Failed to save:', error);
             alert('Failed to save progress.');
@@ -376,6 +370,8 @@ function App() {
                     <StudyCharts subjects={subjects} />
 
                     <WeeklyStats currentDate={date} />
+
+                    <CountdownTimer />
                 </motion.main>
             </div>
         </div>

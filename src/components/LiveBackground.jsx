@@ -17,41 +17,66 @@ const LiveBackground = memo(({ theme }) => {
     );
 });
 
-// Optimized Cherry Blossom - Using CSS animations instead of Framer Motion
+// Optimized Cherry Blossom - Using CSS animations
 const CherryBlossom = memo(() => {
-    // Reduced from 45 to 20 petals
+    // 20 petals and 8 whole flowers
     const petals = useMemo(() => Array.from({ length: 20 }).map((_, i) => ({
         id: i,
         x: Math.random() * 100,
         delay: Math.random() * 8,
         duration: 8 + Math.random() * 6,
         size: 16 + Math.random() * 12,
-        variant: i % 3
+        variant: i % 3,
+        type: 'petal'
     })), []);
 
+    const flowers = useMemo(() => Array.from({ length: 8 }).map((_, i) => ({
+        id: 100 + i,
+        x: Math.random() * 100,
+        delay: Math.random() * 10,
+        duration: 10 + Math.random() * 8,
+        size: 24 + Math.random() * 10,
+        rotation: Math.random() * 360,
+        type: 'flower'
+    })), []);
+
+    const allItems = [...petals, ...flowers];
     const colors = ['#f9a8d4', '#fda4af', '#f0abfc'];
 
     return (
         <div className="absolute inset-0 bg-gradient-to-b from-pink-100 via-rose-50 to-pink-50">
             <div className="absolute inset-0 bg-gradient-to-br from-pink-200/30 via-transparent to-rose-200/20" />
-            {petals.map((petal) => (
+
+            {allItems.map((item) => (
                 <div
-                    key={petal.id}
+                    key={item.id}
                     className="petal-fall"
                     style={{
-                        left: `${petal.x}%`,
-                        width: petal.size,
-                        height: petal.size * 1.2,
-                        animationDuration: `${petal.duration}s`,
-                        animationDelay: `${petal.delay}s`,
+                        left: `${item.x}%`,
+                        width: item.size,
+                        height: item.size * (item.type === 'flower' ? 1 : 1.2),
+                        animationDuration: `${item.duration}s`,
+                        animationDelay: `${item.delay}s`,
                     }}
                 >
-                    <svg viewBox="0 0 30 40" className="w-full h-full">
-                        <path
-                            d="M15,2 Q28,12 26,25 Q24,35 15,38 Q6,35 4,25 Q2,12 15,2 Z"
-                            fill={colors[petal.variant]}
-                        />
-                    </svg>
+                    {item.type === 'petal' ? (
+                        <svg viewBox="0 0 30 40" className="w-full h-full">
+                            <path
+                                d="M15,2 Q28,12 26,25 Q24,35 15,38 Q6,35 4,25 Q2,12 15,2 Z"
+                                fill={colors[item.variant]}
+                            />
+                        </svg>
+                    ) : (
+                        <svg viewBox="0 0 40 40" className="w-full h-full opacity-90 spin-slow">
+                            {/* 5-petal flower shape */}
+                            <path d="M20,20 Q20,5 28,10 Q35,15 20,20 Z" fill="#fecdd3" transform="rotate(0 20 20)" />
+                            <path d="M20,20 Q35,15 40,23 Q35,35 20,20 Z" fill="#fecdd3" transform="rotate(72 20 20)" />
+                            <path d="M20,20 Q35,35 25,40 Q10,40 20,20 Z" fill="#fecdd3" transform="rotate(144 20 20)" />
+                            <path d="M20,20 Q10,40 0,30 Q5,15 20,20 Z" fill="#fecdd3" transform="rotate(216 20 20)" />
+                            <path d="M20,20 Q5,15 5,5 Q15,0 20,20 Z" fill="#fecdd3" transform="rotate(288 20 20)" />
+                            <circle cx="20" cy="20" r="4" fill="#fb7185" />
+                        </svg>
+                    )}
                 </div>
             ))}
         </div>

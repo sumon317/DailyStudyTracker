@@ -24,6 +24,19 @@ A beautiful, feature-rich study tracking application built with React. Track you
 - **Error Log** - Document mistakes and learnings
 - **Real-time Clock** - Stay aware of time
 - **Stopwatch** - Built-in timer for study sessions
+- **Focus Timer** - Adjustable countdown timer with hours/minutes/seconds
+
+### 🔔 Smart Notifications
+- **Study Reminders** - Set specific times for each subject
+- **Continuous Alarm** - High-priority alarm that rings for 30s+ to wake you up
+- **Reliable Alerts** - Works even when app is closed or in background
+- **One-Time Schedule** - Alarms ring only for the set day (no unwanted repeats)
+
+### 📲 Home Screen Widget
+- **Mini-App Widget** - View your schedule without opening the app
+- **Widget Actions** - Play/Pause timer directly from home screen
+- **Theme Toggle** - Switch widget themes independently
+- **Real-time Sync** - Updates instantly when app data changes
 
 ### 🎨 Beautiful Themes
 | Theme | Description |
