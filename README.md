@@ -4,7 +4,8 @@ A beautiful, feature-rich study tracking application built with React. Track you
 
 ![Daily Study Tracker](https://img.shields.io/badge/React-18-blue) ![Capacitor](https://img.shields.io/badge/Capacitor-Android-green) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-### 🌐 [Live Demo](https://dailystudytracker.onrender.com)
+### 🌐 Live Demo
+The app is fully functional and live on the web at: **[dailystudytracker.onrender.com](https://dailystudytracker.onrender.com)**
 
 ## ✨ Features
 
