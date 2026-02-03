@@ -1,20 +1,64 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { Award, Sun } from 'lucide-react';
 
-const QualityCheck = ({ checks, setChecks, rating, setRating }) => {
-    const toggleCheck = (id) => {
-        const newChecks = checks.map((check) =>
-            check.id === id ? { ...check, checked: !check.checked } : check
-        );
-        setChecks(newChecks);
-    };
+const QualityCheckItem = memo(({ check, onToggle, onUpdateLabel }) => (
+    <div className="flex items-center gap-3">
+        <input
+            type="checkbox"
+            checked={check.checked}
+            onChange={onToggle}
+            className="h-4 w-4 rounded border-app-border text-app-primary focus:ring-app-primary bg-app-surface cursor-pointer"
+        />
+        <input
+            type="text"
+            value={check.label}
+            onChange={(e) => onUpdateLabel(e.target.value)}
+            className="flex-1 bg-transparent border-none p-0 text-xs sm:text-sm text-app-text-muted focus:ring-0 focus:outline-none"
+        />
+    </div>
+));
 
-    const updateLabel = (id, newLabel) => {
-        const newChecks = checks.map((check) =>
+QualityCheckItem.displayName = 'QualityCheckItem';
+
+const RatingOption = memo(({ option, isSelected, onSelect }) => (
+    <label
+        className={`flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border p-2 sm:p-3 text-xs sm:text-sm font-medium transition-all ${isSelected
+            ? 'border-app-primary bg-app-primary/10 text-app-primary ring-1 ring-app-primary'
+            : 'border-app-border text-app-text-muted hover:border-app-primary/50 hover:bg-app-bg'
+            }`}
+    >
+        <input
+            type="radio"
+            name="day-rating"
+            value={option}
+            checked={isSelected}
+            onChange={onSelect}
+            className="sr-only"
+        />
+        {option}
+    </label>
+));
+
+RatingOption.displayName = 'RatingOption';
+
+const RATING_OPTIONS = ['Productive', 'Okayish', 'Unproductive'];
+
+const QualityCheck = memo(({ checks, setChecks, rating, setRating }) => {
+    const toggleCheck = useCallback((id) => {
+        setChecks(prevChecks => prevChecks.map((check) =>
+            check.id === id ? { ...check, checked: !check.checked } : check
+        ));
+    }, [setChecks]);
+
+    const updateLabel = useCallback((id, newLabel) => {
+        setChecks(prevChecks => prevChecks.map((check) =>
             check.id === id ? { ...check, label: newLabel } : check
-        );
-        setChecks(newChecks);
-    };
+        ));
+    }, [setChecks]);
+
+    const handleRatingChange = useCallback((e) => {
+        setRating(e.target.value);
+    }, [setRating]);
 
     return (
         <div className="grid gap-6 md:grid-cols-2">
@@ -26,20 +70,12 @@ const QualityCheck = ({ checks, setChecks, rating, setRating }) => {
                 </div>
                 <div className="space-y-3">
                     {checks.map((check) => (
-                        <div key={check.id} className="flex items-center gap-3">
-                            <input
-                                type="checkbox"
-                                checked={check.checked}
-                                onChange={() => toggleCheck(check.id)}
-                                className="h-4 w-4 rounded border-app-border text-app-primary focus:ring-app-primary bg-app-surface cursor-pointer"
-                            />
-                            <input
-                                type="text"
-                                value={check.label}
-                                onChange={(e) => updateLabel(check.id, e.target.value)}
-                                className="flex-1 bg-transparent border-none p-0 text-xs sm:text-sm text-app-text-muted focus:ring-0 focus:outline-none"
-                            />
-                        </div>
+                        <QualityCheckItem
+                            key={check.id}
+                            check={check}
+                            onToggle={() => toggleCheck(check.id)}
+                            onUpdateLabel={(label) => updateLabel(check.id, label)}
+                        />
                     ))}
                 </div>
             </div>
@@ -51,30 +87,20 @@ const QualityCheck = ({ checks, setChecks, rating, setRating }) => {
                     <h2 className="text-base sm:text-lg font-semibold text-app-text-main">Day Rating</h2>
                 </div>
                 <div className="flex gap-2 sm:gap-4">
-                    {['Productive', 'Okayish', 'Unproductive'].map((option) => (
-                        <label
+                    {RATING_OPTIONS.map((option) => (
+                        <RatingOption
                             key={option}
-                            className={`flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border p-2 sm:p-3 text-xs sm:text-sm font-medium transition-all ${rating === option
-                                ? 'border-app-primary bg-app-primary/10 text-app-primary ring-1 ring-app-primary'
-                                : 'border-app-border text-app-text-muted hover:border-app-primary/50 hover:bg-app-bg'
-                                }`}
-                        >
-                            <input
-                                type="radio"
-                                name="day-rating"
-                                value={option}
-                                checked={rating === option}
-                                onChange={(e) => setRating(e.target.value)}
-                                className="sr-only"
-                            />
-                            {option}
-                        </label>
+                            option={option}
+                            isSelected={rating === option}
+                            onSelect={handleRatingChange}
+                        />
                     ))}
                 </div>
             </div>
         </div>
     );
-};
+});
+
+QualityCheck.displayName = 'QualityCheck';
 
 export default QualityCheck;
-

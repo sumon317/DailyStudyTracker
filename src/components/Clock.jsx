@@ -1,17 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import { Clock as ClockIcon } from 'lucide-react';
 
-const Clock = () => {
+const Clock = memo(() => {
     const [time, setTime] = useState(new Date());
+    const timerRef = useRef(null);
 
     useEffect(() => {
-        const timer = setInterval(() => {
+        // Use requestAnimationFrame for smoother updates
+        const updateTime = () => {
             setTime(new Date());
-        }, 1000);
-        return () => clearInterval(timer);
+        };
+
+        timerRef.current = setInterval(updateTime, 1000);
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
     }, []);
 
-    // Format: 10:45:23 AM
+    // Format: 10:45:23 AM - memoize the options object
     const timeString = time.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
@@ -25,6 +33,8 @@ const Clock = () => {
             <span>{timeString}</span>
         </div>
     );
-};
+});
+
+Clock.displayName = 'Clock';
 
 export default Clock;

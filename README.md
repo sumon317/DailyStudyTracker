@@ -8,15 +8,22 @@ A beautiful, feature-rich study tracking application built with React. Track you
 
 ### 📊 Study Tracking
 - **6-Hour Daily Target** - Track study time across multiple subjects
-- **Subject Management** - Customize subjects with planned vs actual hours
+- **Subject Management** - Add or remove subjects dynamically
 - **KPI Tracking** - Mark subjects as completed (Y/N)
 - **Smart Day Rating** - Automatic rating based on your progress
+- **Study Charts** - Visual pie charts and progress bars for time distribution
+
+### 📈 Stats & Analysis
+- **Weekly Stats** - View study patterns with bar charts
+- **Study Streak** - Track consecutive days studied
+- **Completion Rate** - See daily and weekly goal completion %
 
 ### ✅ Productivity Tools
 - **Daily Checklist** - Track specific study tasks
 - **Quality Check** - Self-assessment questions
 - **Error Log** - Document mistakes and learnings
 - **Real-time Clock** - Stay aware of time
+- **Stopwatch** - Built-in timer for study sessions
 
 ### 🎨 Beautiful Themes
 | Theme | Description |
@@ -33,10 +40,12 @@ A beautiful, feature-rich study tracking application built with React. Track you
 - **Web Browser** - Works on any modern browser
 - **Android App** - Native APK with Capacitor
 - **Persistent Storage** - Data saved locally on device
+- **Auto-Save** - Automatically saves progress every 10 seconds
 
-### 📤 Export Options
+### 📤 Export & Backup
 - **PDF Export** - Professional formatted report
 - **Markdown Export** - Plain text for notes apps
+- **Backup & Restore** - Export all data to JSON and restore on any device
 
 ## 🚀 Getting Started
 
@@ -90,7 +99,7 @@ npx cap open android
 ```
 DailyStudyTracker/
 ├── src/
-│   ├── components/     # React components
+│   ├── components/     # React components (Charts, Stats, Tracker, etc.)
 │   ├── utils/          # PDF & Markdown generators
 │   ├── db.js           # Database & storage logic
 │   ├── App.jsx         # Main application

@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
+import { Plus, Trash2, BookOpen } from 'lucide-react';
 
-const TrackerForm = ({ subjects, setSubjects }) => {
-    const handleChange = (index, field, value) => {
+const TrackerForm = memo(({ subjects, setSubjects }) => {
+    const handleChange = useCallback((index, field, value) => {
         // Prevent negative numbers
         if ((field === 'planned' || field === 'actual') && parseFloat(value) < 0) {
             return;
         }
 
-        const newSubjects = subjects.map((subj, i) => {
+        setSubjects(prevSubjects => prevSubjects.map((subj, i) => {
             if (i === index) {
-                // Create shallow copy of the object being updated
                 const updatedSubj = { ...subj, [field]: value };
 
                 // Auto-calculate KPI (only when actual changes)
@@ -23,38 +23,55 @@ const TrackerForm = ({ subjects, setSubjects }) => {
                 return updatedSubj;
             }
             return subj;
-        });
+        }));
+    }, [setSubjects]);
 
-        setSubjects(newSubjects);
-    };
+    const addSubject = useCallback(() => {
+        setSubjects(prev => [...prev, { name: 'New Subject', planned: '60', actual: '0', kpi: 'N' }]);
+    }, [setSubjects]);
 
-    const calculateTotal = (field) => {
-        return subjects.reduce((acc, curr) => {
-            const val = parseFloat(curr[field]) || 0;
-            return acc + val;
-        }, 0);
-    };
+    const removeSubject = useCallback((index) => {
+        if (subjects.length <= 1) return; // Keep at least one subject
+        setSubjects(prev => prev.filter((_, i) => i !== index));
+    }, [setSubjects, subjects.length]);
 
-    const getDayRating = () => {
+    const totalPlanned = useMemo(() =>
+        subjects.reduce((acc, curr) => acc + (parseFloat(curr.planned) || 0), 0),
+        [subjects]
+    );
+
+    const totalActual = useMemo(() =>
+        subjects.reduce((acc, curr) => acc + (parseFloat(curr.actual) || 0), 0),
+        [subjects]
+    );
+
+    const dayRating = useMemo(() => {
         const kpiCount = subjects.filter(s => s.kpi === 'Y').length;
         const ratio = kpiCount / subjects.length;
-
-        if (ratio >= 0.8) return 'Productive'; // ≥ 5/6
-        if (ratio >= 0.5) return 'Okayish';    // ≥ 3/6
+        if (ratio >= 0.8) return 'Productive';
+        if (ratio >= 0.5) return 'Okayish';
         return 'Unproductive';
-    };
+    }, [subjects]);
 
-    const getDayRatingColor = () => {
-        const rating = getDayRating();
-        if (rating === 'Productive') return 'text-green-600 dark:text-green-400';
-        if (rating === 'Okayish') return 'text-amber-600 dark:text-amber-400';
+    const dayRatingColor = useMemo(() => {
+        if (dayRating === 'Productive') return 'text-green-600 dark:text-green-400';
+        if (dayRating === 'Okayish') return 'text-amber-600 dark:text-amber-400';
         return 'text-red-500 dark:text-red-400';
-    };
+    }, [dayRating]);
 
     return (
         <div className="overflow-hidden rounded-xl border border-app-border bg-app-surface shadow-sm">
-            <div className="border-b border-app-border bg-app-bg/50 px-4 sm:px-6 py-3 sm:py-4">
-                <h2 className="text-base sm:text-lg font-semibold text-app-text-main">Study Planner</h2>
+            <div className="border-b border-app-border bg-app-bg/50 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <BookOpen size={18} className="text-app-primary" />
+                    <h2 className="text-base sm:text-lg font-semibold text-app-text-main">Study Planner</h2>
+                </div>
+                <button
+                    onClick={addSubject}
+                    className="flex items-center gap-1 rounded-lg bg-app-primary px-3 py-1.5 text-xs font-medium text-app-primary-fg hover:bg-app-primary-hover transition-colors"
+                >
+                    <Plus size={14} /> Add Subject
+                </button>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs sm:text-sm text-app-text-muted min-w-[500px]">
@@ -64,6 +81,7 @@ const TrackerForm = ({ subjects, setSubjects }) => {
                             <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">Plan</th>
                             <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">Actual</th>
                             <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">KPI</th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 w-10"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-app-border">
@@ -105,21 +123,35 @@ const TrackerForm = ({ subjects, setSubjects }) => {
                                         <option value="N">No</option>
                                     </select>
                                 </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                    {subjects.length > 1 && (
+                                        <button
+                                            onClick={() => removeSubject(index)}
+                                            className="p-1.5 rounded-lg text-app-text-muted hover:text-app-accent-error hover:bg-app-bg transition-colors"
+                                            title="Remove subject"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                         <tr className="bg-app-bg/50 font-bold text-app-text-main">
                             <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">Total</td>
-                            <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">{calculateTotal('planned')}</td>
-                            <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">{calculateTotal('actual')}</td>
-                            <td className={`px-2 sm:px-4 md:px-6 py-2 sm:py-3 ${getDayRatingColor()}`}>
-                                {getDayRating()}
+                            <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">{totalPlanned}</td>
+                            <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">{totalActual}</td>
+                            <td className={`px-2 sm:px-4 md:px-6 py-2 sm:py-3 ${dayRatingColor}`}>
+                                {dayRating}
                             </td>
+                            <td></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     );
-};
+});
+
+TrackerForm.displayName = 'TrackerForm';
 
 export default TrackerForm;
