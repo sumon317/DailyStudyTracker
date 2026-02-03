@@ -106,8 +106,8 @@ const TimePicker = memo(({ value, onChange }) => {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs sm:text-sm font-medium w-full min-w-[110px] justify-center ${value
-                        ? 'bg-app-primary/10 border-app-primary text-app-primary'
-                        : 'bg-app-surface border-app-border text-app-text-muted hover:border-app-primary/50'
+                    ? 'bg-app-primary/10 border-app-primary text-app-primary'
+                    : 'bg-app-surface border-app-border text-app-text-muted hover:border-app-primary/50'
                     }`}
             >
                 <Clock size={14} />
@@ -145,11 +145,11 @@ const TimePicker = memo(({ value, onChange }) => {
 
                             {/* Minutes */}
                             <div className="flex flex-col items-center">
-                                <button onClick={() => adjust('m', 5)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronUp size={20} /></button>
+                                <button onClick={() => adjust('m', 1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronUp size={20} /></button>
                                 <div className="text-3xl font-mono font-bold text-app-text-main w-16 text-center select-none">
                                     {tempTime.m.toString().padStart(2, '0')}
                                 </div>
-                                <button onClick={() => adjust('m', -5)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronDown size={20} /></button>
+                                <button onClick={() => adjust('m', -1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronDown size={20} /></button>
                                 <span className="text-[10px] font-bold text-app-text-muted tracking-wide">MIN</span>
                             </div>
 
@@ -158,8 +158,8 @@ const TimePicker = memo(({ value, onChange }) => {
                                 <button
                                     onClick={togglePeriod}
                                     className={`px-2 py-4 rounded-lg font-bold text-sm transition-colors border ${tempTime.period === 'AM'
-                                            ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                            : 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                                        ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                        : 'bg-indigo-100 text-indigo-700 border-indigo-200'
                                         }`}
                                 >
                                     {tempTime.period}

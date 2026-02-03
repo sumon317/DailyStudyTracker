@@ -67,20 +67,52 @@ class StudyWidgetFactory implements RemoteViewsService.RemoteViewsFactory {
             String time = item.optString("time", "");
             String planned = item.optString("planned", "0");
             String actual = item.optString("actual", "0");
-            String kpi = item.optString("kpi", "N");
 
             views.setTextViewText(R.id.widget_subject_name, name);
-            views.setTextViewText(R.id.widget_subject_time, time.isEmpty() ? "--:--" : time);
             
-            // Format 12-hour time if needed, but assuming react sends formatted string or simple HH:MM
-            // React app seems to save "10:00" (HH:MM). I can try to format it here or keep it simple.
-            // Let's keep it simple for now as HH:MM is readable.
+            // Convert 24hr time to 12hr format with AM/PM
+            String displayTime = "--:--";
+            if (!time.isEmpty()) {
+                try {
+                    String[] parts = time.split(":");
+                    int hour = Integer.parseInt(parts[0]);
+                    int minute = Integer.parseInt(parts[1]);
+                    String period = (hour >= 12) ? "PM" : "AM";
+                    int displayHour = hour % 12;
+                    if (displayHour == 0) displayHour = 12;
+                    displayTime = displayHour + ":" + String.format("%02d", minute) + " " + period;
+                } catch (Exception e) {
+                    displayTime = time; // Fallback to original
+                }
+            }
+            views.setTextViewText(R.id.widget_subject_time, displayTime);
 
             String progressText = actual + "/" + planned + " min";
             views.setTextViewText(R.id.widget_subject_kpi, progressText);
 
-            // Color logic could go here, but RemoteViews is limited. 
-            // We set basic colors in XML. Here we can toggle visibility or simple color changes if needed.
+            // Apply theme-based colors (2 themes: 0=Dark, 1=Light)
+            SharedPreferences prefs = context.getSharedPreferences("WidgetPrefs", Context.MODE_PRIVATE);
+            int theme = prefs.getInt("current_theme", 0);
+            boolean isLightTheme = (theme == 1);
+            
+            // Alternating row colors (zebra striping)
+            int rowBgColor;
+            if (isLightTheme) {
+                // Light themes - alternating light backgrounds
+                rowBgColor = (position % 2 == 0) ? 0x1A000000 : 0x0D000000; // Darker / Lighter
+                views.setTextColor(R.id.widget_subject_name, 0xFF0F172A); // Slate-900
+                views.setTextColor(R.id.widget_subject_time, 0xFF4F46E5); // Indigo-600
+                views.setTextColor(R.id.widget_subject_kpi, 0xFF475569);  // Slate-600
+            } else {
+                // Dark themes - alternating dark backgrounds
+                rowBgColor = (position % 2 == 0) ? 0x33FFFFFF : 0x1AFFFFFF; // Lighter / Darker
+                views.setTextColor(R.id.widget_subject_name, 0xFFFFFFFF); // White
+                views.setTextColor(R.id.widget_subject_time, 0xFF818CF8); // Indigo-400
+                views.setTextColor(R.id.widget_subject_kpi, 0xFFCBD5E1);  // Slate-300
+            }
+            
+            // Apply row background color
+            views.setInt(R.id.widget_item_root, "setBackgroundColor", rowBgColor);
             
         } catch (Exception e) {
             e.printStackTrace();

@@ -35,17 +35,18 @@ A beautiful, feature-rich study tracking application built with React. Track you
 ### 📲 Home Screen Widget
 - **Mini-App Widget** - View your schedule without opening the app
 - **Widget Actions** - Play/Pause timer directly from home screen
-- **Theme Toggle** - Switch widget themes independently
+- **Theme Toggle** - Switch between Dark and Light modes
 - **Real-time Sync** - Updates instantly when app data changes
+> **Note:** The persistent stopwatch notification is exclusively for the Widget timer.
 
-### 🎨 Beautiful Themes
+### 🎨 Beautiful Themes (In-App)
 | Theme | Description |
 |-------|-------------|
 | ☀️ Light | Warm cream tones with indigo accents |
 | 🌙 Dark | Classic dark mode with indigo highlights |
 | 🌿 Material Day | Fresh teal/mint aesthetic |
 | 💜 Material Night | Modern purple/violet design |
-| 🌸 Cherry Blossom | Animated falling petals |
+| 🌸 Cherry Blossom | Animated falling petals (Default) |
 | 🎋 Bamboo Forest | Peaceful green with floating leaves |
 | 🌊 Ocean Depths | Underwater world with fish & bubbles |
 
@@ -124,7 +125,18 @@ DailyStudyTracker/
 
 ## 📸 Screenshots
 
-*Coming soon*
+<p float="left">
+  <img src="screenshots/Screenshot_20260203-142355.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142411.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142434.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142443.png" width="200" /> 
+  <img src="screenshots/Screenshot_20260203-142451.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142505.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142731.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142753.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142802.png" width="200" />
+  <img src="screenshots/Screenshot_20260203-142812.png" width="200" />
+</p>
 
 ## 🤝 Contributing
 

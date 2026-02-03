@@ -5,21 +5,25 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="10dp">
 
-    <!-- Header: Date and Theme Button -->
+    <!-- Row 1: Date Block + Clock + Theme Button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingBottom="8dp">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
+        <!-- Date/Day Block (rounded) -->
         <LinearLayout
+            android:id="@+id/widget_date_section"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:background="@drawable/widget_section_dark">
 
             <TextView
                 android:id="@+id/widget_date_day"
@@ -27,128 +31,123 @@
                 android:layout_height="wrap_content"
                 android:text="Monday"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/widget_date_full"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Oct 24, 2026"
-                android:textColor="#CBD5E1"
-                android:textSize="12sp" />
+                android:text="Feb 3, 2026"
+                android:textColor="#94A3B8"
+                android:textSize="12sp"
+                android:maxLines="1" />
         </LinearLayout>
 
-        <ImageView
+        <!-- Clock (no block) -->
+        <TextClock
+            android:id="@+id/widget_clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format12Hour="h:mm:ss a"
+            android:format24Hour="HH:mm:ss"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Theme Toggle Button -->
+        <TextView
             android:id="@+id/widget_theme_btn"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:padding="4dp"
-            android:src="@android:drawable/ic_menu_gallery"
-            android:tint="#FFFFFF"
-            android:contentDescription="Change Theme" />
-            
-        <ImageView
-            android:id="@+id/widget_refresh"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_marginLeft="8dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:padding="4dp"
-            android:src="@android:drawable/ic_menu_rotate"
-            android:tint="#FFFFFF"
-            android:contentDescription="Refresh" />
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:text="🎨"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_rounded" />
+
     </LinearLayout>
 
+    <!-- Row 2: Timer + Buttons in same line (one rounded block) -->
     <LinearLayout
+        android:id="@+id/widget_timer_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="10dp"
+        android:background="@drawable/widget_section_dark"
+        android:layout_marginBottom="8dp">
+
+        <!-- Timer Display -->
+        <Chronometer
+            android:id="@+id/widget_timer_chronometer"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textSize="28sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+        <!-- Timer Buttons -->
+        <TextView
+            android:id="@+id/widget_btn_play"
+            android:layout_width="44dp"
+            android:layout_height="40dp"
+            android:text="▶"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_rounded" />
+
+        <TextView
+            android:id="@+id/widget_btn_pause"
+            android:layout_width="44dp"
+            android:layout_height="40dp"
+            android:text="❚❚"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/widget_btn_rounded" />
+
+        <TextView
+            android:id="@+id/widget_btn_reset"
+            android:layout_width="44dp"
+            android:layout_height="40dp"
+            android:text="↺"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/widget_btn_rounded" />
+
+    </LinearLayout>
+
+    <!-- Subject List -->
+    <ListView
+        android:id="@+id/widget_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="vertical">
+        android:divider="@android:color/transparent"
+        android:dividerHeight="4dp"
+        android:scrollbars="none"
+        android:fadingEdge="vertical" />
 
-        <!-- Timer Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/widget_bg"
-            android:backgroundTint="#20FFFFFF"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="8dp"
-            android:layout_marginBottom="8dp">
-
-            <Chronometer
-                android:id="@+id/widget_timer_chronometer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="24sp"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold" 
-                android:format="%s"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:id="@+id/widget_btn_play"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:padding="4dp"
-                    android:src="@android:drawable/ic_media_play"
-                    android:tint="#4ADE80" />
-
-                <ImageView
-                    android:id="@+id/widget_btn_pause"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginLeft="16dp"
-                    android:padding="4dp"
-                    android:src="@android:drawable/ic_media_pause"
-                    android:tint="#FACC15" />
-
-                <ImageView
-                    android:id="@+id/widget_btn_reset"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginLeft="16dp"
-                    android:padding="4dp"
-                    android:src="@android:drawable/ic_menu_revert"
-                    android:tint="#F87171" />
-            </LinearLayout>
-        </LinearLayout>
-        
-        <!-- List Header -->
-        <TextView
-             android:layout_width="wrap_content"
-             android:layout_height="wrap_content"
-             android:text="Upcoming"
-             android:textSize="10sp"
-             android:textColor="#94A3B8"
-             android:layout_marginBottom="4dp"/>
-
-        <ListView
-            android:id="@+id/widget_list"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:divider="#00000000"
-            android:dividerHeight="4dp" />
-            
-        <TextView
-            android:id="@+id/empty_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="No tasks"
-            android:textColor="#AAFFFFFF"
-            android:textSize="12sp"
-            android:visibility="gone" />
-            
-    </LinearLayout>
+    <!-- Empty State -->
+    <TextView
+        android:id="@+id/empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="No subjects"
+        android:textColor="#64748B"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
 </LinearLayout>

@@ -148,9 +148,9 @@ function App() {
 
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined' && window.localStorage) {
-            return localStorage.getItem('theme') || 'light';
+            return localStorage.getItem('theme') || 'cherry-blossom';
         }
-        return 'light';
+        return 'cherry-blossom';
     });
 
     useEffect(() => {

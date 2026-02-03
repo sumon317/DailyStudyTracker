@@ -39,7 +39,7 @@ public class WidgetDataPlugin extends Plugin {
         
         context.sendBroadcast(intent);
 
-        // Also notify specifically for list view data change
+        // Notify specifically for list view data change
         appWidgetManager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list);
 
         call.resolve();

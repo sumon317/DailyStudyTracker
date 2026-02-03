@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { Timer, Play, Pause, RotateCcw, X, Check, ChevronDown } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, X, Check, ChevronDown, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { KeepAwake } from '@capacitor-community/keep-awake';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 const CountdownTimer = memo(() => {
     const [timeLeft, setTimeLeft] = useState(1800); // Default 30 minutes (in seconds)
@@ -23,16 +25,68 @@ const CountdownTimer = memo(() => {
         }
     }, []);
 
-    const playAlarm = useCallback(() => {
-        if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification("Time's Up!", { body: "Your focus session is complete." });
-        } else {
-            alert("Time's up! Great focus session.");
+    const playAlarm = useCallback(async () => {
+        // 1. Vibrate
+        if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+
+        // 2. Play Sound (Oscillator beep)
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const playBeep = (startTime) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, startTime);
+                osc.frequency.exponentialRampToValueAtTime(440, startTime + 0.5);
+                gain.gain.setValueAtTime(0.5, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+                osc.start(startTime);
+                osc.stop(startTime + 0.5);
+            };
+            // Play 3 times
+            const now = ctx.currentTime;
+            playBeep(now);
+            playBeep(now + 0.6);
+            playBeep(now + 1.2);
+        } catch (e) {
+            console.error("Audio play failed", e);
+        }
+
+        // 3. Native Notification
+        try {
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: "Time's Up!",
+                    body: "Your focus session is complete.",
+                    id: 1,
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null, // Use default
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
+            });
+        } catch (e) {
+            // Fallback to web notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification("Time's Up!", { body: "Your focus session is complete." });
+            }
         }
     }, []);
 
+    // WakeLock & Timer Logic
     useEffect(() => {
+        const manageWakeLock = async () => {
+            if (isActive) {
+                await KeepAwake.keepAwake();
+            } else {
+                await KeepAwake.allowSleep();
+            }
+        };
+        manageWakeLock();
+
         if (isActive && timeLeft > 0) {
             intervalRef.current = setInterval(() => {
                 setTimeLeft((time) => {
@@ -51,8 +105,19 @@ const CountdownTimer = memo(() => {
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
+            // Don't disable wakelock here to avoid flickering logic, 
+            // but normally we should allow sleep on unmount.
+            KeepAwake.allowSleep();
         };
     }, [isActive, timeLeft, playAlarm]);
+
+    const addTenSeconds = useCallback(() => {
+        setTimeLeft(prev => prev + 10);
+    }, []);
+
+    const addThirtySeconds = useCallback(() => {
+        setTimeLeft(prev => prev + 30);
+    }, []);
 
     const toggleTimer = useCallback(() => {
         setIsActive(!isActive);
@@ -231,28 +296,50 @@ const CountdownTimer = memo(() => {
                                     </div>
 
                                     {/* Controls */}
-                                    <div className="flex items-center gap-6">
+                                    {/* Controls */}
+                                    <div className="flex flex-col items-center gap-6">
+                                        {/* Main Play/Pause Button */}
                                         <button
                                             onClick={toggleTimer}
-                                            className={`flex items-center justify-center w-16 h-16 rounded-full shadow-lg transition-transform active:scale-95 ${isActive
-                                                    ? 'bg-app-accent-warning text-white hover:bg-app-accent-warning/90'
-                                                    : 'bg-app-primary text-white hover:bg-app-primary-hover'
+                                            className={`flex items-center justify-center w-20 h-20 rounded-full shadow-xl transition-all active:scale-95 ${isActive
+                                                ? 'bg-app-accent-warning text-white hover:bg-app-accent-warning/90 ring-4 ring-app-accent-warning/20'
+                                                : 'bg-app-primary text-white hover:bg-app-primary-hover ring-4 ring-app-primary/20'
                                                 }`}
                                         >
                                             {isActive ? (
-                                                <Pause size={28} fill="currentColor" />
+                                                <Pause size={32} fill="currentColor" />
                                             ) : (
-                                                <Play size={28} fill="currentColor" className="ml-1" />
+                                                <Play size={32} fill="currentColor" className="ml-1" />
                                             )}
                                         </button>
 
-                                        <button
-                                            onClick={resetTimer}
-                                            className="flex items-center justify-center w-12 h-12 rounded-full bg-app-bg text-app-text-muted border border-app-border hover:bg-app-surface hover:text-app-text-main transition-colors shadow-sm active:scale-95"
-                                            title="Reset"
-                                        >
-                                            <RotateCcw size={20} />
-                                        </button>
+                                        {/* Secondary Controls - Centered Row */}
+                                        <div className="flex items-center gap-3 bg-app-bg/50 p-2 rounded-2xl border border-app-border/50 backdrop-blur-sm">
+                                            <button
+                                                onClick={resetTimer}
+                                                className="flex items-center justify-center w-10 h-10 rounded-full text-app-text-muted hover:bg-app-surface hover:text-app-text-main transition-colors"
+                                                title="Reset"
+                                            >
+                                                <RotateCcw size={18} />
+                                            </button>
+
+                                            <div className="w-px h-6 bg-app-border/50 mx-1" />
+
+                                            <button
+                                                onClick={addTenSeconds}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-app-surface text-app-primary border border-app-border hover:bg-app-bg transition-colors active:scale-95"
+                                                title="Add 10s"
+                                            >
+                                                +10s
+                                            </button>
+                                            <button
+                                                onClick={addThirtySeconds}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-app-surface text-app-primary border border-app-border hover:bg-app-bg transition-colors active:scale-95"
+                                                title="Add 30s"
+                                            >
+                                                +30s
+                                            </button>
+                                        </div>
                                     </div>
                                 </>
                             )}

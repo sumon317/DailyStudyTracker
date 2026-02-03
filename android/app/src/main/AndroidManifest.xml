@@ -41,6 +41,10 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.sumon.studytracker.ACTION_TIMER_START" />
+                <action android:name="com.sumon.studytracker.ACTION_TIMER_PAUSE" />
+                <action android:name="com.sumon.studytracker.ACTION_TIMER_RESET" />
+                <action android:name="com.sumon.studytracker.ACTION_THEME_TOGGLE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -50,7 +54,14 @@
         <!-- Widget Service -->
         <service
             android:name=".StudyWidgetService"
+            android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- Stopwatch Notification Service -->
+        <service
+            android:name=".StopwatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
     </application>
 
     <!-- Permissions -->
@@ -59,4 +70,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 </manifest>
