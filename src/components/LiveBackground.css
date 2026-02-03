@@ -1,0 +1,154 @@
+/* LiveBackground CSS Animations - GPU Accelerated */
+/* Using transform and opacity for smooth 60fps animations */
+
+/* Falling petal animation for Cherry Blossom */
+.petal-fall {
+    position: absolute;
+    top: -30px;
+    will-change: transform, opacity;
+    animation: petalFall linear infinite;
+}
+
+@keyframes petalFall {
+    0% {
+        transform: translateY(0) translateX(0) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(110vh) translateX(40px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Particle float animation for Bamboo */
+.particle-float {
+    will-change: transform, opacity;
+    animation: particleFloat ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+    0%, 100% {
+        transform: translateY(0);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-20px);
+        opacity: 0.7;
+    }
+}
+
+/* Falling leaf animation for Bamboo */
+.leaf-fall {
+    position: absolute;
+    top: -50px;
+    will-change: transform, opacity;
+    animation: leafFall linear infinite;
+}
+
+@keyframes leafFall {
+    0% {
+        transform: translateY(0) translateX(0) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(110vh) translateX(30px) rotate(180deg);
+        opacity: 0;
+    }
+}
+
+/* Bubble rise animation for Ocean */
+.bubble-rise {
+    bottom: -20px;
+    will-change: transform, opacity;
+    animation: bubbleRise linear infinite;
+}
+
+@keyframes bubbleRise {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.6;
+    }
+    90% {
+        opacity: 0.4;
+    }
+    100% {
+        transform: translateY(-110vh) translateX(10px);
+        opacity: 0;
+    }
+}
+
+/* Fish swimming animations for Ocean */
+.fish-swim-right {
+    position: absolute;
+    will-change: transform;
+    animation: fishSwimRight linear infinite;
+}
+
+.fish-swim-left {
+    position: absolute;
+    will-change: transform;
+    animation: fishSwimLeft linear infinite;
+}
+
+@keyframes fishSwimRight {
+    0% {
+        transform: translateX(-100px) scaleX(1);
+    }
+    100% {
+        transform: translateX(100vw) scaleX(1);
+    }
+}
+
+@keyframes fishSwimLeft {
+    0% {
+        transform: translateX(100vw) scaleX(-1);
+    }
+    100% {
+        transform: translateX(-100px) scaleX(-1);
+    }
+}
+
+/* Seaweed sway animation */
+.seaweed-sway {
+    transform-origin: bottom center;
+    will-change: transform;
+    animation: seaweedSway ease-in-out infinite;
+    animation-duration: 4s;
+}
+
+@keyframes seaweedSway {
+    0%, 100% {
+        transform: rotate(-3deg);
+    }
+    50% {
+        transform: rotate(3deg);
+    }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .petal-fall,
+    .particle-float,
+    .leaf-fall,
+    .bubble-rise,
+    .fish-swim-right,
+    .fish-swim-left,
+    .seaweed-sway {
+        animation: none !important;
+    }
+}

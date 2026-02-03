@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Theme - Warm & Modern */
+    --color-app-bg: 254 252 248;
+    /* Warm cream background */
+    --color-app-surface: 255 255 255;
+    /* Pure white surface */
+    --color-app-text-main: 30 30 40;
+    /* Soft black */
+    --color-app-text-muted: 100 100 120;
+    /* Muted purple-gray */
+    --color-app-border: 230 228 235;
+    /* Light lavender border */
+    --color-app-primary: 99 102 241;
+    /* Indigo-500 - vibrant */
+    --color-app-primary-hover: 79 70 229;
+    /* Indigo-600 */
+    --color-app-primary-fg: 255 255 255;
+    /* White */
+
+    --color-app-accent-success: 16 185 129;
+    /* Emerald-500 */
+    --color-app-accent-warning: 245 158 11;
+    /* Amber-500 */
+    --color-app-accent-error: 239 68 68;
+    /* Red-500 */
+  }
+
+  .dark {
+    /* Standard Dark (Gray/Indigo) */
+    --color-app-bg: 17 24 39;
+    /* gray-900 */
+    --color-app-surface: 31 41 55;
+    /* gray-800 */
+    --color-app-text-main: 243 244 246;
+    /* gray-100 */
+    --color-app-text-muted: 156 163 175;
+    /* gray-400 */
+    --color-app-border: 55 65 81;
+    /* gray-700 */
+    --color-app-primary: 99 102 241;
+    /* indigo-500 (lighter for dark mode) */
+    --color-app-primary-hover: 129 140 248;
+    /* indigo-400 */
+    --color-app-accent-success: 74 222 128;
+    /* green-400 */
+    --color-app-accent-warning: 251 191 36;
+    /* amber-400 */
+    --color-app-accent-error: 248 113 113;
+    /* red-400 */
+  }
+
+  .theme-material {
+    /* Material Day - Fresh Teal/Mint Aesthetic */
+    --color-app-bg: 240 253 250;
+    /* Soft mint background */
+    --color-app-surface: 255 255 255;
+    /* Pure white surface */
+    --color-app-text-main: 15 45 45;
+    /* Deep teal-black */
+    --color-app-text-muted: 75 115 115;
+    /* Muted teal */
+    --color-app-border: 180 230 220;
+    /* Soft teal border */
+    --color-app-primary: 20 184 166;
+    /* Teal-500 - vibrant */
+    --color-app-primary-hover: 13 148 136;
+    /* Teal-600 */
+    --color-app-primary-fg: 255 255 255;
+    /* White */
+    --color-app-accent-success: 34 197 94;
+    /* Green-500 */
+    --color-app-accent-warning: 251 146 60;
+    /* Orange-400 */
+    --color-app-accent-error: 244 63 94;
+    /* Rose-500 */
+  }
+
+  .dark.theme-material {
+    /* Material Dark - Modern Material You Design */
+    /* Deep rich blacks with purple/cyan gradient feel */
+    --color-app-bg: 10 10 20;
+    /* Near black with slight blue tint */
+    --color-app-surface: 25 25 40;
+    /* Dark purple-tinted surface */
+    --color-app-text-main: 240 240 255;
+    /* Soft white with slight purple tint */
+    --color-app-text-muted: 160 160 190;
+    /* Muted lavender */
+    --color-app-border: 60 60 90;
+    /* Purple-tinted border */
+    --color-app-primary: 168 85 247;
+    /* Purple-500 - vibrant */
+    --color-app-primary-hover: 192 132 252;
+    /* Purple-400 - lighter on hover */
+    --color-app-primary-fg: 255 255 255;
+    /* White text on primary */
+    --color-app-accent-success: 52 211 153;
+    /* Emerald-400 */
+    --color-app-accent-warning: 251 191 36;
+    /* Amber-400 */
+    --color-app-accent-error: 251 113 133;
+    /* Rose-400 */
+  }
+
+  .theme-ocean {
+    /* Ocean Depths Theme - Dark surfaces with teal accents */
+    --color-app-bg: 15 23 42;
+    /* slate-900 */
+    --color-app-surface: 30 41 59;
+    /* slate-800 */
+    --color-app-text-main: 94 234 212;
+    /* teal-300 */
+    --color-app-text-muted: 45 212 191;
+    /* teal-400 */
+    --color-app-border: 51 65 85;
+    /* slate-700 */
+    --color-app-primary: 20 184 166;
+    /* teal-500 */
+    --color-app-primary-hover: 45 212 191;
+    /* teal-400 */
+    --color-app-primary-fg: 15 23 42;
+    /* slate-900 (dark text on bright buttons) */
+    --color-app-accent-success: 52 211 153;
+    /* emerald-400 */
+    --color-app-accent-warning: 251 191 36;
+    /* amber-400 */
+    --color-app-accent-error: 251 113 133;
+    /* rose-400 */
+  }
+
+  .theme-cherry {
+    /* Cherry Blossom Theme - Pink aesthetic */
+    --color-app-bg: 255 241 242;
+    /* rose-50 */
+    --color-app-surface: 255 228 230;
+    /* rose-100 */
+    --color-app-text-main: 136 19 55;
+    /* rose-900 */
+    --color-app-text-muted: 190 18 60;
+    /* rose-700 */
+    --color-app-border: 190 18 60;
+    /* rose-700 (dark pink) */
+    --color-app-primary: 244 63 94;
+    /* rose-500 */
+    --color-app-primary-hover: 225 29 72;
+    /* rose-600 */
+    --color-app-primary-fg: 255 255 255;
+    /* white */
+    --color-app-accent-success: 34 197 94;
+    /* green-500 */
+    --color-app-accent-warning: 245 158 11;
+    /* amber-500 */
+    --color-app-accent-error: 239 68 68;
+    /* red-500 */
+  }
+
+  .theme-bamboo {
+    /* Bamboo Forest Theme - Green aesthetic */
+    --color-app-bg: 240 253 244;
+    /* green-50 */
+    --color-app-surface: 220 252 231;
+    /* green-100 */
+    --color-app-text-main: 20 83 45;
+    /* green-900 */
+    --color-app-text-muted: 21 128 61;
+    /* green-700 */
+    --color-app-border: 74 222 128;
+    /* green-400 */
+    --color-app-primary: 22 163 74;
+    /* green-600 */
+    --color-app-primary-hover: 21 128 61;
+    /* green-700 */
+    --color-app-primary-fg: 255 255 255;
+    /* white */
+    --color-app-accent-success: 34 197 94;
+    /* green-500 */
+    --color-app-accent-warning: 245 158 11;
+    /* amber-500 */
+    --color-app-accent-error: 239 68 68;
+    /* red-500 */
+  }
+}

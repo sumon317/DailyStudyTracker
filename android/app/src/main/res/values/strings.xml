@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Daily Study Tracker</string>
+    <string name="title_activity_main">Daily Study Tracker</string>
+    <string name="package_name">com.sumon.studytracker</string>
+    <string name="custom_url_scheme">com.sumon.studytracker</string>
+</resources>
