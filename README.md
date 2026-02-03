@@ -114,7 +114,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-**Sumon** - [GitHub](https://github.com/sumon317)
+**Sumon317** - [GitHub](https://github.com/sumon317)
 
 ---
 
