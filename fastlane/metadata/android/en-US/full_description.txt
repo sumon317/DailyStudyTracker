@@ -1,0 +1,12 @@
+Daily Study Tracker helps you stay productive and achieve your learning goals.
+
+Features:
+*   **Study Tracking**: Log your planned vs actual study time for different subjects.
+*   **KPI Tracking**: Automatically calculates if you met your daily goals (80% rule).
+*   **Visual Charts**: Weekly stats and progress bars to keep you motivated.
+*   **Focus Timer**: Built-in stopwatch and countdown timer with persistent notifications.
+*   **Beautiful Themes**: Choose from Light, Dark, or animated Live Themes like Cherry Blossom or Ocean.
+*   **No Ads, No Tracking**: 100% Free and Open Source.
+*   **Export Data**: Save your logs as PDF or Markdown files.
+
+This app is designed to be simple, beautiful, and effective for students and self-learners.
