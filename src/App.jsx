@@ -17,6 +17,8 @@ import WeeklyStats from './components/WeeklyStats';
 import StudyCharts from './components/StudyCharts';
 import CountdownTimer from './components/CountdownTimer';
 import { updateWidget } from './utils/widgetBridge';
+import { checkForUpdate } from './utils/checkForUpdate';
+import UpdateModal from './components/UpdateModal';
 
 // Default State Constants - defined outside component to avoid recreation
 const DEFAULT_SUBJECTS = [
@@ -205,6 +207,7 @@ function App() {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
+    const [updateInfo, setUpdateInfo] = useState(null);
 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
@@ -274,6 +277,13 @@ function App() {
             }
         };
         loadData();
+
+        // Check for updates (non-blocking) - Only run once on mount
+        checkForUpdate().then(info => {
+            if (info && info.available) {
+                setUpdateInfo(info);
+            }
+        });
     }, [date]);
 
     const handleDownloadPDF = useCallback(() => {
@@ -337,7 +347,6 @@ function App() {
         <div className={containerClassName}>
             <LiveBackground theme={theme} />
 
-            {/* Hidden file input for import */}
             <input
                 type="file"
                 ref={fileInputRef}
@@ -345,6 +354,14 @@ function App() {
                 accept=".json"
                 className="hidden"
             />
+
+            {/* Update Modal */}
+            {updateInfo && (
+                <UpdateModal
+                    updateInfo={updateInfo}
+                    onClose={() => setUpdateInfo(null)}
+                />
+            )}
 
             <div className={contentClassName}>
                 <Header
