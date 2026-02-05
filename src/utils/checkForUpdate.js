@@ -5,8 +5,16 @@ const GITHUB_REPO = 'sumon317/DailyStudyTracker';
 const CURRENT_VERSION = packageJson.version;
 
 /**
+ * @typedef {Object} UpdateResult
+ * @property {boolean} available - Whether an update is available
+ * @property {string} [tag] - The new version tag (e.g. "v1.0.3")
+ * @property {string} [url] - Download URL for the APK
+ * @property {string} [notes] - Release notes/body
+ */
+
+/**
  * Checks if a newer version is available on GitHub Releases.
- * @returns {Promise<{available: boolean, tag: string, url: string, notes: string}|null>}
+ * @returns {Promise<UpdateResult>}
  */
 export const checkForUpdate = async () => {
     // Only run on native Android to avoid annoying web users (or run on both if desired)
@@ -14,7 +22,7 @@ export const checkForUpdate = async () => {
 
     try {
         const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
-        if (!response.ok) return null;
+        if (!response.ok) return { available: false };
 
         const data = await response.json();
         const latestTag = data.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present

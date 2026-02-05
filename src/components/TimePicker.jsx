@@ -82,22 +82,35 @@ const TimePicker = memo(({ value, onChange }) => {
     useEffect(() => {
         if (isOpen && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
-            // Position to the left of the button, centered vertically if possible, or just below
-            // Since it's inside a table, fixed is safest.
             const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
             const popoverW = 256; // w-64
+            const popoverH = 280; // Approximate height
 
-            let left = rect.right - popoverW;
-            if (left < 10) left = rect.left; // if too far left, align left
+            // For small screens (mobile), center the popup
+            let left, top;
 
-            // Check bottom edge
-            const popoverH = 300;
-            let top = rect.bottom + 5;
-            if (top + popoverH > window.innerHeight) {
-                top = rect.top - popoverH - 5; // flip up
+            if (screenW < 500) {
+                // Center horizontally on mobile
+                left = (screenW - popoverW) / 2;
+            } else {
+                // Align with button on desktop
+                left = rect.right - popoverW;
+                if (left < 10) left = rect.left;
+                if (left + popoverW > screenW - 10) left = screenW - popoverW - 10;
             }
 
-            setPosition({ top, left });
+            // Position below button, but flip up if not enough space
+            top = rect.bottom + 8;
+            if (top + popoverH > screenH - 20) {
+                // Not enough space below, try above
+                top = rect.top - popoverH - 8;
+                // If still not enough space above, center vertically
+                if (top < 20) {
+                    top = Math.max(20, (screenH - popoverH) / 2);
+                }
+            }
+
             setPosition({ top, left });
         }
     }, [isOpen]);
