@@ -94,19 +94,19 @@ const TrackerForm = memo(({ subjects, setSubjects }) => {
                 scheduledTime.setDate(scheduledTime.getDate() + 1);
             }
 
-            const success = await NotificationService.scheduleNotification(
+            const result = await NotificationService.scheduleNotification(
                 subject.id,
                 `Study Time: ${subject.name}`,
                 `It's time to start studying ${subject.name}! Target: ${subject.planned} min.`,
                 scheduledTime
             );
 
-            if (success) {
+            if (result.success) {
                 handleChange(index, 'reminder', true);
                 // Optional: Alert user
                 // alert(`Reminder set for ${scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`);
             } else {
-                alert("Failed to schedule notification. Check permissions.");
+                alert(`Failed to schedule notification: ${result.error || 'Unknown error'}`);
             }
         }
     }, [subjects, handleChange]);

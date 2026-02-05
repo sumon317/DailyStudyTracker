@@ -1,7 +1,10 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-export const generatePDF = (data) => {
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+
+export const generatePDF = async (data) => {
     const { date, subjects, checklistItems, qualityChecks, dayRating, errors } = data;
 
     const doc = new jsPDF();
@@ -127,5 +130,24 @@ export const generatePDF = (data) => {
         }
     });
 
-    doc.save(`Study_Tracker_${date}.pdf`);
+    const fileName = `Study_Tracker_${date}.pdf`;
+
+    if (Capacitor.isNativePlatform()) {
+        try {
+            // Get base64 string without prefix
+            const base64Data = doc.output('datauristring').split(',')[1];
+
+            await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Documents,
+            });
+            alert(`✅ PDF Saved to Documents folder as ${fileName}`);
+        } catch (e) {
+            console.error("File Save Error", e);
+            alert("❌ Failed to save PDF to device storage.");
+        }
+    } else {
+        doc.save(fileName);
+    }
 };

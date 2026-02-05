@@ -1,6 +1,23 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export const NotificationService = {
+    // Convert long ID (Date.now()) to 32-bit int for Android
+    safeId(id) {
+        // Simple hash to ensure it fits in 32-bit int
+        // Android notification IDs must be int (approx -2B to +2B)
+        // We handle string or number inputs
+        const strId = String(id);
+        let hash = 0;
+        for (let i = 0; i < strId.length; i++) {
+            const char = strId.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        // Ensure strictly positive 31-bit integer to avoid any signed/unsigned confusion
+        // We also xor with a magic number to scramble it further from common patterns
+        return (Math.abs(hash) ^ 0x5F3759DF) & 0x7FFFFFFF;
+    },
+
     // Request permissions
     async requestPermissions() {
         try {
@@ -32,13 +49,15 @@ export const NotificationService = {
     },
 
     // Schedule a notification
-    async scheduleNotification(id, title, body, date) {
+    async scheduleNotification(originalId, title, body, date) {
         try {
+            const id = this.safeId(originalId);
+
             // Ensure permissions
             const hasPermission = await this.checkPermissions();
             if (!hasPermission) {
                 const granted = await this.requestPermissions();
-                if (!granted) return false;
+                if (!granted) return { success: false, error: 'Permission not granted (request rejected)' };
             }
 
             // Ensure channel exists
@@ -54,19 +73,20 @@ export const NotificationService = {
                     smallIcon: 'ic_stat_icon_config_sample',
                     channelId: 'study-reminders', // Use our high priority channel
                     actionTypeId: '',
-                    extra: null
+                    extra: { originalId } // Keep original ID in extras just in case
                 }]
             });
-            return true;
+            return { success: true };
         } catch (error) {
             console.error('Failed to schedule notification:', error);
-            return false;
+            return { success: false, error: error.message || JSON.stringify(error) };
         }
     },
 
     // Cancel a notification
-    async cancelNotification(id) {
+    async cancelNotification(originalId) {
         try {
+            const id = this.safeId(originalId);
             await LocalNotifications.cancel({ notifications: [{ id }] });
             return true;
         } catch (error) {

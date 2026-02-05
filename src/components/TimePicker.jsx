@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -97,8 +98,81 @@ const TimePicker = memo(({ value, onChange }) => {
             }
 
             setPosition({ top, left });
+            setPosition({ top, left });
         }
     }, [isOpen]);
+
+    const popupContent = (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.1 }}
+                    style={{
+                        position: 'fixed',
+                        top: position.top,
+                        left: position.left,
+                        zIndex: 9999
+                    }}
+                    className="w-64 rounded-xl border border-app-border bg-app-surface shadow-xl p-4"
+                >
+                    <div className="flex items-center justify-center gap-2 mb-6">
+                        {/* Hours */}
+                        <div className="flex flex-col items-center">
+                            <button onClick={() => adjust('h', 1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronUp size={20} /></button>
+                            <div className="text-3xl font-mono font-bold text-app-text-main w-16 text-center select-none">
+                                {tempTime.h}
+                            </div>
+                            <button onClick={() => adjust('h', -1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronDown size={20} /></button>
+                            <span className="text-[10px] font-bold text-app-text-muted tracking-wide">HR</span>
+                        </div>
+
+                        <div className="text-2xl font-bold text-app-text-muted mb-4">:</div>
+
+                        {/* Minutes */}
+                        <div className="flex flex-col items-center">
+                            <button onClick={() => adjust('m', 1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronUp size={20} /></button>
+                            <div className="text-3xl font-mono font-bold text-app-text-main w-16 text-center select-none">
+                                {tempTime.m.toString().padStart(2, '0')}
+                            </div>
+                            <button onClick={() => adjust('m', -1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronDown size={20} /></button>
+                            <span className="text-[10px] font-bold text-app-text-muted tracking-wide">MIN</span>
+                        </div>
+
+                        {/* Period */}
+                        <div className="flex flex-col items-center ml-2">
+                            <button
+                                onClick={togglePeriod}
+                                className={`px-2 py-4 rounded-lg font-bold text-sm transition-colors border ${tempTime.period === 'AM'
+                                    ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                    : 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                                    }`}
+                            >
+                                {tempTime.period}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleClear}
+                            className="flex-1 py-2 rounded-lg border border-app-border text-app-text-muted hover:bg-app-bg transition-colors text-xs font-medium"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="flex-1 py-2 rounded-lg bg-app-primary text-app-primary-fg hover:bg-app-primary-hover transition-colors text-xs font-bold shadow-sm flex items-center justify-center gap-1"
+                        >
+                            <Check size={14} /> Set
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
 
     return (
         <div className="relative" ref={containerRef}>
@@ -114,76 +188,8 @@ const TimePicker = memo(({ value, onChange }) => {
                 {displayValue || 'Set Time'}
             </button>
 
-            {/* Popover - Fixed Position */}
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.1 }}
-                        style={{
-                            position: 'fixed',
-                            top: position.top,
-                            left: position.left,
-                            zIndex: 9999
-                        }}
-                        className="w-64 rounded-xl border border-app-border bg-app-surface shadow-xl p-4"
-                    >
-                        <div className="flex items-center justify-center gap-2 mb-6">
-                            {/* Hours */}
-                            <div className="flex flex-col items-center">
-                                <button onClick={() => adjust('h', 1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronUp size={20} /></button>
-                                <div className="text-3xl font-mono font-bold text-app-text-main w-16 text-center select-none">
-                                    {tempTime.h}
-                                </div>
-                                <button onClick={() => adjust('h', -1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronDown size={20} /></button>
-                                <span className="text-[10px] font-bold text-app-text-muted tracking-wide">HR</span>
-                            </div>
-
-                            <div className="text-2xl font-bold text-app-text-muted mb-4">:</div>
-
-                            {/* Minutes */}
-                            <div className="flex flex-col items-center">
-                                <button onClick={() => adjust('m', 1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronUp size={20} /></button>
-                                <div className="text-3xl font-mono font-bold text-app-text-main w-16 text-center select-none">
-                                    {tempTime.m.toString().padStart(2, '0')}
-                                </div>
-                                <button onClick={() => adjust('m', -1)} className="p-1 hover:text-app-primary text-app-text-muted transition-colors"><ChevronDown size={20} /></button>
-                                <span className="text-[10px] font-bold text-app-text-muted tracking-wide">MIN</span>
-                            </div>
-
-                            {/* Period */}
-                            <div className="flex flex-col items-center ml-2">
-                                <button
-                                    onClick={togglePeriod}
-                                    className={`px-2 py-4 rounded-lg font-bold text-sm transition-colors border ${tempTime.period === 'AM'
-                                        ? 'bg-amber-100 text-amber-700 border-amber-200'
-                                        : 'bg-indigo-100 text-indigo-700 border-indigo-200'
-                                        }`}
-                                >
-                                    {tempTime.period}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleClear}
-                                className="flex-1 py-2 rounded-lg border border-app-border text-app-text-muted hover:bg-app-bg transition-colors text-xs font-medium"
-                            >
-                                Clear
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                className="flex-1 py-2 rounded-lg bg-app-primary text-app-primary-fg hover:bg-app-primary-hover transition-colors text-xs font-bold shadow-sm flex items-center justify-center gap-1"
-                            >
-                                <Check size={14} /> Set
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Popover - Moved to Portal */}
+            {typeof document !== 'undefined' && createPortal(popupContent, document.body)}
         </div>
     );
 });

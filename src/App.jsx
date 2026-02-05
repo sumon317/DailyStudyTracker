@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Download, FileText, Upload, Save } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { motion } from 'framer-motion';
 import TrackerForm from './components/TrackerForm';
 import Checklist from './components/Checklist';
@@ -84,51 +85,72 @@ const Header = memo(({
             <select
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
-                className="h-9 sm:h-10 rounded-lg border border-app-border bg-app-surface px-2 text-xs sm:text-sm text-app-text-main shadow-sm focus:border-app-primary focus:ring-1 focus:ring-app-primary flex-1 sm:flex-none"
+                className={`h-9 sm:h-10 rounded-lg border border-app-border bg-app-surface px-2 text-xs sm:text-sm text-app-text-main shadow-sm focus:border-app-primary focus:ring-1 focus:ring-app-primary 
+                    ${Capacitor.isNativePlatform() ? 'w-24 text-[10px]' : 'flex-1 sm:flex-none sm:w-40'} 
+                `}
             >
                 <optgroup label="Standard">
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
-                    <option value="material-light">Material Day</option>
-                    <option value="material-dark">Material Night</option>
+                    <option value="material-light">Mat. Day</option>
+                    <option value="material-dark">Mat. Night</option>
                 </optgroup>
                 <optgroup label="Live Themes ✨">
-                    <option value="cherry-blossom">🌸 Cherry Blossom</option>
-                    <option value="bamboo-forest">🎋 Bamboo Forest</option>
-                    <option value="ocean-depths">🌊 Ocean Depths</option>
+                    <option value="cherry-blossom">🌸 Cherry</option>
+                    <option value="bamboo-forest">🎋 Bamboo</option>
+                    <option value="ocean-depths">🌊 Ocean</option>
                 </optgroup>
             </select>
 
-            {/* Export/Import Buttons */}
-            <button
-                onClick={onExport}
-                className="flex items-center gap-2 rounded-lg bg-app-primary px-3 py-2 font-medium text-app-primary-fg shadow-sm transition-colors hover:bg-app-primary-hover focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
-                title="Export all data as backup"
-            >
-                <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
-                <span className="hidden sm:inline">Backup</span>
-            </button>
-            <button
-                onClick={onImportClick}
-                className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface px-3 py-2 font-medium text-app-text-main shadow-sm transition-colors hover:bg-app-bg focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
-                title="Import data from backup"
-            >
-                <Upload size={16} className="sm:w-[18px] sm:h-[18px]" />
-                <span className="hidden sm:inline">Restore</span>
-            </button>
+            {/* Export/Import Buttons Group */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={onExport}
+                    className="flex items-center gap-2 rounded-lg bg-app-primary px-3 py-2 font-medium text-app-primary-fg shadow-sm transition-colors hover:bg-app-primary-hover focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
+                    title="Export all data as backup"
+                >
+                    <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    <span className="hidden sm:inline">Backup</span>
+                </button>
+                <button
+                    onClick={onImportClick}
+                    className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface px-3 py-2 font-medium text-app-text-main shadow-sm transition-colors hover:bg-app-bg focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
+                    title="Import data from backup"
+                >
+                    <Upload size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    <span className="hidden sm:inline">Restore</span>
+                </button>
+            </div>
 
-            <button
-                onClick={onDownloadPDF}
-                className="flex items-center gap-2 rounded-lg bg-app-primary px-4 py-2 font-medium text-app-primary-fg shadow-sm transition-colors hover:bg-app-primary-hover focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
-            >
-                <Download size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">PDF</span>
-            </button>
-            <button
-                onClick={onDownloadMD}
-                className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface px-4 py-2 font-medium text-app-text-main shadow-sm transition-colors hover:bg-app-bg focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
-            >
-                <FileText size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">Markdown</span>
-            </button>
+            {/* PDF/MD Export Buttons Group */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={onDownloadPDF}
+                    className="flex items-center gap-2 rounded-lg bg-app-primary px-3 py-2 font-medium text-app-primary-fg shadow-sm transition-colors hover:bg-app-primary-hover focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
+                >
+                    {Capacitor.isNativePlatform() ? (
+                        <span className="font-bold text-xs sm:text-sm">PDF</span>
+                    ) : (
+                        <>
+                            <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
+                            <span className="hidden sm:inline">PDF</span>
+                        </>
+                    )}
+                </button>
+                <button
+                    onClick={onDownloadMD}
+                    className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface px-3 py-2 font-medium text-app-text-main shadow-sm transition-colors hover:bg-app-bg focus:ring-2 focus:ring-app-primary focus:ring-offset-2"
+                >
+                    {Capacitor.isNativePlatform() ? (
+                        <span className="font-bold text-xs sm:text-sm">.md</span>
+                    ) : (
+                        <>
+                            <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />
+                            <span className="hidden sm:inline">Markdown</span>
+                        </>
+                    )}
+                </button>
+            </div>
         </div>
     </motion.div>
 ));
