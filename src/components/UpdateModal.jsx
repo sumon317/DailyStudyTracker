@@ -1,13 +1,14 @@
 import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Gift } from 'lucide-react';
+import { Browser } from '@capacitor/browser';
 
 const UpdateModal = memo(({ updateInfo, onClose }) => {
     if (!updateInfo || !updateInfo.available) return null;
 
-    const handleDownload = () => {
-        // Open the download URL in the system browser
-        window.open(updateInfo.url, '_system');
+    const handleDownload = async () => {
+        // Open the download URL in the system browser using Capacitor Browser
+        await Browser.open({ url: updateInfo.url });
         onClose();
     };
 
