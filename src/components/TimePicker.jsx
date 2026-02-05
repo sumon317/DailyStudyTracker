@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TimePicker = memo(({ value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
+    const popupRef = useRef(null);
 
     // Parse value (HH:MM) to manageable state
     const parseTime = (timeStr) => {
@@ -24,15 +25,22 @@ const TimePicker = memo(({ value, onChange }) => {
         }
     }, [isOpen, value]);
 
-    // Click outside to close
+    // Click outside to close - must exclude both container AND popup
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (containerRef.current && !containerRef.current.contains(event.target)) {
+            const clickedInsideContainer = containerRef.current?.contains(event.target);
+            const clickedInsidePopup = popupRef.current?.contains(event.target);
+
+            if (!clickedInsideContainer && !clickedInsidePopup) {
                 setIsOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
     }, []);
 
     const handleSave = () => {
@@ -119,6 +127,7 @@ const TimePicker = memo(({ value, onChange }) => {
         <AnimatePresence>
             {isOpen && (
                 <motion.div
+                    ref={popupRef}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
