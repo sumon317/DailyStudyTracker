@@ -13,6 +13,72 @@ const isNative = Capacitor.isNativePlatform();
 
 // Native file storage helper for Android
 const STORAGE_FILE = 'study-tracker-data.json';
+const RECURRING_KEY = '__recurring_subjects';
+
+/**
+ * Save recurring subject templates
+ * These auto-populate on new days until toggled off
+ */
+export const saveRecurringSubjects = async (recurringSubjects) => {
+    if (!isNative) {
+        // Web: use localStorage
+        localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringSubjects));
+        return true;
+    }
+
+    try {
+        let allData = {};
+        try {
+            const existingFile = await Filesystem.readFile({
+                path: STORAGE_FILE,
+                directory: Directory.Data,
+                encoding: Encoding.UTF8,
+            });
+            allData = JSON.parse(existingFile.data);
+        } catch (e) {
+            allData = {};
+        }
+
+        allData[RECURRING_KEY] = recurringSubjects;
+
+        await Filesystem.writeFile({
+            path: STORAGE_FILE,
+            data: JSON.stringify(allData, null, 2),
+            directory: Directory.Data,
+            encoding: Encoding.UTF8,
+        });
+
+        console.log('[Native Storage] Saved recurring subjects');
+        return true;
+    } catch (error) {
+        console.error('[Native Storage] Recurring save error:', error);
+        localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringSubjects));
+        return true;
+    }
+};
+
+/**
+ * Load recurring subject templates
+ */
+export const loadRecurringSubjects = async () => {
+    if (!isNative) {
+        const stored = localStorage.getItem(RECURRING_KEY);
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    try {
+        const existingFile = await Filesystem.readFile({
+            path: STORAGE_FILE,
+            directory: Directory.Data,
+            encoding: Encoding.UTF8,
+        });
+        const allData = JSON.parse(existingFile.data);
+        return allData[RECURRING_KEY] || [];
+    } catch (error) {
+        const stored = localStorage.getItem(RECURRING_KEY);
+        return stored ? JSON.parse(stored) : [];
+    }
+};
 
 /**
  * Save data to native file storage (Android)
@@ -100,7 +166,10 @@ export const exportAllData = async () => {
             encoding: Encoding.UTF8,
         });
         const allData = JSON.parse(existingFile.data);
-        return Object.values(allData);
+        // Exclude internal keys like recurring subjects from backup
+        return Object.entries(allData)
+            .filter(([key]) => !key.startsWith('__'))
+            .map(([, value]) => value);
     } catch (error) {
         return [];
     }

@@ -3,17 +3,15 @@
     android:id="@+id/widget_item_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
+    android:orientation="vertical"
     android:padding="8dp"
     android:background="@drawable/widget_item_bg">
 
-    <!-- Subject Name -->
+    <!-- Subject Name (full width, top row) -->
     <TextView
         android:id="@+id/widget_subject_name"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:text="Subject Name"
         android:textColor="#FFFFFF"
         android:textSize="13sp"
@@ -21,24 +19,33 @@
         android:maxLines="1"
         android:ellipsize="end" />
 
-    <!-- Time -->
-    <TextView
-        android:id="@+id/widget_subject_time"
-        android:layout_width="wrap_content"
+    <!-- Time + Progress (second row, below name) -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="10:00"
-        android:textColor="#818CF8"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:layout_marginEnd="8dp" />
+        android:orientation="horizontal"
+        android:layout_marginTop="2dp">
 
-    <!-- Progress -->
-    <TextView
-        android:id="@+id/widget_subject_kpi"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0/60 min"
-        android:textColor="#CBD5E1"
-        android:textSize="11sp" />
+        <!-- Time -->
+        <TextView
+            android:id="@+id/widget_subject_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10:00"
+            android:textColor="#818CF8"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="10dp" />
+
+        <!-- Progress -->
+        <TextView
+            android:id="@+id/widget_subject_kpi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0/60 min"
+            android:textColor="#CBD5E1"
+            android:textSize="11sp" />
+
+    </LinearLayout>
 
 </LinearLayout>

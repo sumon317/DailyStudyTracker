@@ -10,10 +10,6 @@ import android.net.Uri;
 import android.os.SystemClock;
 import android.widget.RemoteViews;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-
 public class StudyWidgetProvider extends AppWidgetProvider {
 
     private static final String ACTION_TIMER_START = "com.sumon.studytracker.ACTION_TIMER_START";
@@ -39,7 +35,8 @@ public class StudyWidgetProvider extends AppWidgetProvider {
         super.onReceive(context, intent);
 
         String action = intent.getAction();
-        int appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+        int appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,
+                AppWidgetManager.INVALID_APPWIDGET_ID);
 
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             return;
@@ -55,7 +52,7 @@ public class StudyWidgetProvider extends AppWidgetProvider {
             editor.putBoolean(PREF_RUNNING + appWidgetId, true);
             editor.apply();
             updateAppWidget(context, AppWidgetManager.getInstance(context), appWidgetId);
-            
+
             // Start foreground notification service
             Intent serviceIntent = new Intent(context, StopwatchService.class);
             serviceIntent.setAction(StopwatchService.ACTION_START);
@@ -70,7 +67,7 @@ public class StudyWidgetProvider extends AppWidgetProvider {
             editor.putBoolean(PREF_RUNNING + appWidgetId, false);
             editor.apply();
             updateAppWidget(context, AppWidgetManager.getInstance(context), appWidgetId);
-            
+
             // Stop foreground notification service
             Intent serviceIntent = new Intent(context, StopwatchService.class);
             serviceIntent.setAction(StopwatchService.ACTION_PAUSE);
@@ -83,7 +80,7 @@ public class StudyWidgetProvider extends AppWidgetProvider {
             editor.putBoolean(PREF_RUNNING + appWidgetId, false);
             editor.apply();
             updateAppWidget(context, AppWidgetManager.getInstance(context), appWidgetId);
-            
+
             // Stop foreground notification service
             Intent serviceIntent = new Intent(context, StopwatchService.class);
             serviceIntent.setAction(StopwatchService.ACTION_STOP);
@@ -92,109 +89,113 @@ public class StudyWidgetProvider extends AppWidgetProvider {
 
         } else if (ACTION_THEME_TOGGLE.equals(action)) {
             int currentTheme = prefs.getInt(PREF_THEME + appWidgetId, 0);
-            int newTheme = (currentTheme + 1) % 2; // Cycle 2 themes: Dark (0), Light (1)
+            int newTheme = (currentTheme == 0) ? 1 : 0;
             editor.putInt(PREF_THEME + appWidgetId, newTheme);
-            editor.putInt("current_theme", newTheme); // Store for service to read
+            // Also update the shared theme for list items
+            editor.putInt("current_theme", newTheme);
             editor.apply();
-            AppWidgetManager awm = AppWidgetManager.getInstance(context);
-            updateAppWidget(context, awm, appWidgetId);
-            // Force list refresh to pick up new theme colors
-            awm.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widget_list);
+            // Notify data changed so list items re-render with new theme
+            AppWidgetManager.getInstance(context).notifyAppWidgetViewDataChanged(appWidgetId, R.id.widget_list);
+            updateAppWidget(context, AppWidgetManager.getInstance(context), appWidgetId);
         }
     }
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_layout);
 
-        // --- 1. THEME LOGIC (2 themes: Dark & Light) ---
-        int theme = prefs.getInt(PREF_THEME + appWidgetId, 0);
-        boolean isLightTheme = (theme == 1);
-        
-        // Apply background and section colors
-        if (isLightTheme) {
-            views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_light);
-            views.setInt(R.id.widget_date_section, "setBackgroundResource", R.drawable.widget_section_light);
-            views.setInt(R.id.widget_timer_section, "setBackgroundResource", R.drawable.widget_section_light);
-        } else {
-            views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg);
-            views.setInt(R.id.widget_date_section, "setBackgroundResource", R.drawable.widget_section_dark);
-            views.setInt(R.id.widget_timer_section, "setBackgroundResource", R.drawable.widget_section_dark);
+            // --- 1. THEME LOGIC (2 themes: Dark & Light) ---
+            int theme = prefs.getInt(PREF_THEME + appWidgetId, 0);
+            boolean isLightTheme = (theme == 1);
+
+            // Apply background and section colors
+            if (isLightTheme) {
+                views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_light);
+                views.setInt(R.id.widget_timer_section, "setBackgroundResource", R.drawable.widget_section_light);
+                views.setInt(R.id.widget_controls_section, "setBackgroundResource", R.drawable.widget_section_light);
+            } else {
+                views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg);
+                views.setInt(R.id.widget_timer_section, "setBackgroundResource", R.drawable.widget_section_dark);
+                views.setInt(R.id.widget_controls_section, "setBackgroundResource", R.drawable.widget_section_dark);
+            }
+
+            // Apply rounded button backgrounds (use drawables for rounded corners)
+            if (isLightTheme) {
+                views.setInt(R.id.widget_btn_play, "setBackgroundResource", R.drawable.widget_btn_play_light);
+                views.setInt(R.id.widget_btn_pause, "setBackgroundResource", R.drawable.widget_btn_pause_light);
+                views.setInt(R.id.widget_btn_reset, "setBackgroundResource", R.drawable.widget_btn_reset_light);
+            } else {
+                views.setInt(R.id.widget_btn_play, "setBackgroundResource", R.drawable.widget_btn_play);
+                views.setInt(R.id.widget_btn_pause, "setBackgroundResource", R.drawable.widget_btn_pause);
+                views.setInt(R.id.widget_btn_reset, "setBackgroundResource", R.drawable.widget_btn_reset);
+            }
+
+            // Apply button text colors (always white)
+            views.setTextColor(R.id.widget_btn_play, 0xFFFFFFFF);
+            views.setTextColor(R.id.widget_btn_pause, 0xFFFFFFFF);
+            views.setTextColor(R.id.widget_btn_reset, 0xFFFFFFFF);
+
+            // Theme toggle button appearance (rounded)
+            if (isLightTheme) {
+                views.setTextViewText(R.id.widget_btn_theme, "☀");
+                views.setTextColor(R.id.widget_btn_theme, 0xFF0F172A);
+                views.setInt(R.id.widget_btn_theme, "setBackgroundResource", R.drawable.widget_btn_theme_light);
+            } else {
+                views.setTextViewText(R.id.widget_btn_theme, "◐");
+                views.setTextColor(R.id.widget_btn_theme, 0xFFE2E8F0);
+                views.setInt(R.id.widget_btn_theme, "setBackgroundResource", R.drawable.widget_btn_theme);
+            }
+
+            // Apply text colors based on theme
+            if (isLightTheme) {
+                int darkText = 0xFF0F172A;
+                views.setTextColor(R.id.widget_timer_chronometer, darkText);
+            } else {
+                int whiteText = 0xFFE2E8F0;
+                views.setTextColor(R.id.widget_timer_chronometer, whiteText);
+            }
+
+            // --- 3. TIMER LOGIC ---
+            long base = prefs.getLong(PREF_BASE + appWidgetId, SystemClock.elapsedRealtime());
+            long pauseTime = prefs.getLong(PREF_PAUSE_TIME + appWidgetId, 0);
+            boolean isRunning = prefs.getBoolean(PREF_RUNNING + appWidgetId, false);
+
+            if (isRunning) {
+                views.setChronometer(R.id.widget_timer_chronometer, base, "%s", true);
+            } else {
+                views.setChronometer(R.id.widget_timer_chronometer, SystemClock.elapsedRealtime() - pauseTime, "%s",
+                        false);
+            }
+
+            // --- 4. LIST LOGIC ---
+            Intent serviceIntent = new Intent(context, StudyWidgetService.class);
+            serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+            serviceIntent.setData(Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME)));
+            views.setRemoteAdapter(R.id.widget_list, serviceIntent);
+            views.setEmptyView(R.id.widget_list, R.id.empty_view);
+
+            // --- 5. BINDING INTENTS ---
+            // Click on empty space opens the app
+            Intent openAppIntent = new Intent(context, MainActivity.class);
+            PendingIntent openAppPendingIntent = PendingIntent.getActivity(context, 0, openAppIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            views.setOnClickPendingIntent(R.id.widget_root, openAppPendingIntent);
+
+            // Timer buttons
+            views.setOnClickPendingIntent(R.id.widget_btn_play,
+                    getSelfPendingIntent(context, appWidgetId, ACTION_TIMER_START));
+            views.setOnClickPendingIntent(R.id.widget_btn_pause,
+                    getSelfPendingIntent(context, appWidgetId, ACTION_TIMER_PAUSE));
+            views.setOnClickPendingIntent(R.id.widget_btn_reset,
+                    getSelfPendingIntent(context, appWidgetId, ACTION_TIMER_RESET));
+            views.setOnClickPendingIntent(R.id.widget_btn_theme,
+                    getSelfPendingIntent(context, appWidgetId, ACTION_THEME_TOGGLE));
+
+            appWidgetManager.updateAppWidget(appWidgetId, views);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        
-        // Button colors
-        int playBtnColor = 0xFF22C55E;  // Green-500
-        int pauseBtnColor = 0xFFEAB308; // Yellow-500
-        int resetBtnColor = 0xFFEF4444; // Red-500
-        int themeBtnColor = isLightTheme ? 0xFF64748B : 0xFF475569;
-        
-        // Apply button backgrounds
-        views.setInt(R.id.widget_btn_play, "setBackgroundColor", playBtnColor);
-        views.setInt(R.id.widget_btn_pause, "setBackgroundColor", pauseBtnColor);
-        views.setInt(R.id.widget_btn_reset, "setBackgroundColor", resetBtnColor);
-        views.setInt(R.id.widget_theme_btn, "setBackgroundColor", themeBtnColor);
-        
-        // Apply button text colors (always white)
-        views.setTextColor(R.id.widget_btn_play, 0xFFFFFFFF);
-        views.setTextColor(R.id.widget_btn_pause, 0xFFFFFFFF);
-        views.setTextColor(R.id.widget_btn_reset, 0xFFFFFFFF);
-        views.setTextColor(R.id.widget_theme_btn, 0xFFFFFFFF);
-        
-        // Apply text colors based on theme
-        if (isLightTheme) {
-            int darkText = 0xFF0F172A;
-            int mutedText = 0xFF475569;
-            views.setTextColor(R.id.widget_date_day, darkText);
-            views.setTextColor(R.id.widget_date_full, mutedText);
-            views.setTextColor(R.id.widget_timer_chronometer, darkText);
-            views.setTextColor(R.id.widget_clock, darkText);
-        } else {
-            int whiteText = 0xFFFFFFFF;
-            int mutedWhite = 0xFF94A3B8;
-            views.setTextColor(R.id.widget_date_day, whiteText);
-            views.setTextColor(R.id.widget_date_full, mutedWhite);
-            views.setTextColor(R.id.widget_timer_chronometer, whiteText);
-            views.setTextColor(R.id.widget_clock, whiteText);
-        }
-
-        // --- 2. DATE LOGIC ---
-        SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", Locale.getDefault());
-        SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
-        Date now = new Date();
-        views.setTextViewText(R.id.widget_date_day, dayFormat.format(now));
-        views.setTextViewText(R.id.widget_date_full, dateFormat.format(now));
-
-        // --- 3. TIMER LOGIC ---
-        long base = prefs.getLong(PREF_BASE + appWidgetId, SystemClock.elapsedRealtime());
-        long pauseTime = prefs.getLong(PREF_PAUSE_TIME + appWidgetId, 0);
-        boolean isRunning = prefs.getBoolean(PREF_RUNNING + appWidgetId, false);
-
-        if (isRunning) {
-            views.setChronometer(R.id.widget_timer_chronometer, base, "%s", true);
-        } else {
-            views.setChronometer(R.id.widget_timer_chronometer, SystemClock.elapsedRealtime() - pauseTime, "%s", false);
-        }
-
-        // --- 4. LIST LOGIC ---
-        Intent serviceIntent = new Intent(context, StudyWidgetService.class);
-        serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-        serviceIntent.setData(Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME)));
-        views.setRemoteAdapter(R.id.widget_list, serviceIntent);
-        views.setEmptyView(R.id.widget_list, R.id.empty_view);
-
-        // --- 5. BINDING INTENTS ---
-        // Click on empty space opens the app
-        Intent openAppIntent = new Intent(context, MainActivity.class);
-        PendingIntent openAppPendingIntent = PendingIntent.getActivity(context, 0, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        views.setOnClickPendingIntent(R.id.widget_root, openAppPendingIntent);
-        
-        // Timer buttons
-        views.setOnClickPendingIntent(R.id.widget_btn_play, getSelfPendingIntent(context, appWidgetId, ACTION_TIMER_START));
-        views.setOnClickPendingIntent(R.id.widget_btn_pause, getSelfPendingIntent(context, appWidgetId, ACTION_TIMER_PAUSE));
-        views.setOnClickPendingIntent(R.id.widget_btn_reset, getSelfPendingIntent(context, appWidgetId, ACTION_TIMER_RESET));
-        views.setOnClickPendingIntent(R.id.widget_theme_btn, getSelfPendingIntent(context, appWidgetId, ACTION_THEME_TOGGLE));
-
-        appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
     private static PendingIntent getSelfPendingIntent(Context context, int appWidgetId, String action) {
@@ -203,6 +204,7 @@ public class StudyWidgetProvider extends AppWidgetProvider {
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
         // Use unique request code per action to avoid PendingIntent collisions
         int uniqueCode = appWidgetId * 10 + action.hashCode();
-        return PendingIntent.getBroadcast(context, uniqueCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getBroadcast(context, uniqueCode, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

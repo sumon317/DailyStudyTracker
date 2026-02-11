@@ -5,124 +5,86 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="8dp">
 
-    <!-- Row 1: Date Block + Clock + Theme Button -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
-
-        <!-- Date/Day Block (rounded) -->
-        <LinearLayout
-            android:id="@+id/widget_date_section"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="10dp"
-            android:background="@drawable/widget_section_dark">
-
-            <TextView
-                android:id="@+id/widget_date_day"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Monday"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
-            <TextView
-                android:id="@+id/widget_date_full"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Feb 3, 2026"
-                android:textColor="#94A3B8"
-                android:textSize="12sp"
-                android:maxLines="1" />
-        </LinearLayout>
-
-        <!-- Clock (no block) -->
-        <TextClock
-            android:id="@+id/widget_clock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:format12Hour="h:mm:ss a"
-            android:format24Hour="HH:mm:ss"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp" />
-
-        <!-- Theme Toggle Button -->
-        <TextView
-            android:id="@+id/widget_theme_btn"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:text="🎨"
-            android:textSize="18sp"
-            android:gravity="center"
-            android:background="@drawable/widget_btn_rounded" />
-
-    </LinearLayout>
-
-    <!-- Row 2: Timer + Buttons in same line (one rounded block) -->
+    <!-- Row 1: Timer Display + Theme Toggle (separate box) -->
     <LinearLayout
         android:id="@+id/widget_timer_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="10dp"
+        android:padding="8dp"
         android:background="@drawable/widget_section_dark"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="4dp">
 
         <!-- Timer Display -->
         <Chronometer
             android:id="@+id/widget_timer_chronometer"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:textSize="28sp"
+            android:layout_weight="1"
+            android:textSize="26sp"
             android:textColor="#FFFFFF"
             android:textStyle="bold" />
 
-        <!-- Timer Buttons -->
+        <!-- Theme Toggle (right corner) -->
+        <TextView
+            android:id="@+id/widget_btn_theme"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:text="◐"
+            android:textSize="14sp"
+            android:textColor="#E2E8F0"
+            android:gravity="center"
+            android:background="@drawable/widget_btn_theme" />
+
+    </LinearLayout>
+
+    <!-- Row 2: Timer Controls (separate box) -->
+    <LinearLayout
+        android:id="@+id/widget_controls_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="6dp"
+        android:background="@drawable/widget_section_dark"
+        android:layout_marginBottom="6dp">
+
         <TextView
             android:id="@+id/widget_btn_play"
-            android:layout_width="44dp"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
             android:text="▶"
-            android:textSize="18sp"
+            android:textSize="13sp"
             android:textColor="#FFFFFF"
             android:gravity="center"
             android:background="@drawable/widget_btn_rounded" />
 
         <TextView
             android:id="@+id/widget_btn_pause"
-            android:layout_width="44dp"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
             android:text="❚❚"
-            android:textSize="14sp"
+            android:textSize="10sp"
             android:textColor="#FFFFFF"
             android:gravity="center"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:background="@drawable/widget_btn_rounded" />
 
         <TextView
             android:id="@+id/widget_btn_reset"
-            android:layout_width="44dp"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:layout_weight="1"
             android:text="↺"
-            android:textSize="18sp"
+            android:textSize="13sp"
             android:textColor="#FFFFFF"
             android:gravity="center"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:background="@drawable/widget_btn_rounded" />
 
     </LinearLayout>
@@ -134,7 +96,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:divider="@android:color/transparent"
-        android:dividerHeight="4dp"
+        android:dividerHeight="3dp"
         android:scrollbars="none"
         android:fadingEdge="vertical" />
 

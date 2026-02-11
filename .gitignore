@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+build_output.txt
 
 # Capacitor Android build artifacts
 android/app/build/
@@ -12,6 +13,7 @@ android/build/
 android/capacitor-cordova-android-plugins/build/
 android/.idea/
 *.apk
+*.aab
 
 # Local environment files
 .env
@@ -30,15 +32,24 @@ android/local.properties
 .DS_Store
 .DS_Store?
 Thumbs.db
+ehthumbs.db
 
-# Debug logs
+# Debug & log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # Test coverage
 coverage/
 
+# Lock files (using bun)
+package-lock.json
+
+# Temp / test files
+test_collision.js
+
 # Misc
-*.log
 .cache/
+.parcel-cache/
+*.tsbuildinfo

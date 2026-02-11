@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { Plus, Trash2, BookOpen, Bell, BellOff } from 'lucide-react';
+import { Plus, Trash2, BookOpen, Bell, BellOff, Repeat2 } from 'lucide-react';
 import { NotificationService } from '../utils/notificationService';
 import TimePicker from './TimePicker';
 
@@ -159,6 +159,7 @@ const TrackerForm = memo(({ subjects, setSubjects }) => {
                             <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">KPI</th>
                             <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3">Time</th>
                             <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 w-10">Alert</th>
+                            <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 w-10" title="Recurring: auto-add to every day">🔁</th>
                             <th className="px-2 sm:px-4 py-2 sm:py-3 w-10"></th>
                         </tr>
                     </thead>
@@ -225,6 +226,18 @@ const TrackerForm = memo(({ subjects, setSubjects }) => {
                                         {subject.reminder ? <Bell size={16} fill="currentColor" /> : <BellOff size={16} />}
                                     </button>
                                 </td>
+                                <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 text-center">
+                                    <button
+                                        onClick={() => handleChange(index, 'recurring', !subject.recurring)}
+                                        className={`p-1.5 rounded-full transition-colors ${subject.recurring
+                                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                            : 'text-app-text-muted hover:bg-app-bg hover:text-blue-500'
+                                            }`}
+                                        title={subject.recurring ? 'Remove from daily recurring' : 'Add to daily recurring'}
+                                    >
+                                        <Repeat2 size={16} />
+                                    </button>
+                                </td>
                                 <td className="px-2 sm:px-4 py-2 sm:py-3">
                                     {subjects.length > 1 && (
                                         <button
@@ -245,7 +258,7 @@ const TrackerForm = memo(({ subjects, setSubjects }) => {
                             <td className={`px-2 sm:px-4 md:px-6 py-2 sm:py-3 ${dayRatingColor}`}>
                                 {dayRating}
                             </td>
-                            <td colSpan={3}></td>
+                            <td colSpan={4}></td>
                         </tr>
                     </tbody>
                 </table>

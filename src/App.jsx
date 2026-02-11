@@ -11,7 +11,7 @@ import Stopwatch from './components/Stopwatch';
 import DatePicker from './components/DatePicker';
 import { generatePDF } from './utils/pdfGenerator';
 import { generateMarkdown } from './utils/mdGenerator';
-import { saveToNativeStorage, loadFromNativeStorage, downloadBackup, handleFileImport } from './db';
+import { saveToNativeStorage, loadFromNativeStorage, downloadBackup, handleFileImport, saveRecurringSubjects, loadRecurringSubjects } from './db';
 import LiveBackground from './components/LiveBackground';
 import WeeklyStats from './components/WeeklyStats';
 import StudyCharts from './components/StudyCharts';
@@ -19,6 +19,8 @@ import CountdownTimer from './components/CountdownTimer';
 import { updateWidget } from './utils/widgetBridge';
 import { checkForUpdate } from './utils/checkForUpdate';
 import UpdateModal from './components/UpdateModal';
+import AlarmPermissionModal from './components/AlarmPermissionModal';
+import { NotificationService } from './utils/notificationService';
 
 // Default State Constants - defined outside component to avoid recreation
 const DEFAULT_SUBJECTS = [
@@ -208,6 +210,7 @@ function App() {
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
     const [updateInfo, setUpdateInfo] = useState(null);
+    const [showAlarmPermissionModal, setShowAlarmPermissionModal] = useState(false);
 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
@@ -221,6 +224,38 @@ function App() {
             });
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
+
+            // Sync recurring subjects
+            try {
+                const existingRecurring = await loadRecurringSubjects();
+                // Build a map of existing recurring by name for reference
+                const recurringMap = {};
+                for (const r of existingRecurring) {
+                    recurringMap[r.name] = r;
+                }
+
+                // Process current subjects
+                for (const s of subjects) {
+                    if (s.recurring) {
+                        // Add or update recurring template
+                        recurringMap[s.name] = {
+                            name: s.name,
+                            planned: s.planned,
+                            time: s.time,
+                            recurring: true,
+                            recurringAddedDate: recurringMap[s.name]?.recurringAddedDate || date,
+                            recurringRemovedDate: null, // Re-enable if toggled back on
+                        };
+                    } else if (recurringMap[s.name] && !recurringMap[s.name].recurringRemovedDate) {
+                        // Subject exists in recurring but was toggled off
+                        recurringMap[s.name].recurringRemovedDate = date;
+                    }
+                }
+
+                await saveRecurringSubjects(Object.values(recurringMap));
+            } catch (e) {
+                console.warn('Failed to sync recurring subjects:', e);
+            }
 
             // Update Widget
             updateWidget(subjects);
@@ -237,6 +272,23 @@ function App() {
         setHasUnsavedChanges(true);
     }, [subjects, checklistItems, qualityChecks, dayRating, errors]);
 
+    // Ref to track previous date for save-before-navigate
+    const prevDateRef = useRef(date);
+    const subjectsRef = useRef(subjects);
+    const checklistRef = useRef(checklistItems);
+    const qualityRef = useRef(qualityChecks);
+    const dayRatingRef = useRef(dayRating);
+    const errorsRef = useRef(errors);
+    const hasUnsavedRef = useRef(hasUnsavedChanges);
+
+    // Keep refs in sync
+    useEffect(() => { subjectsRef.current = subjects; }, [subjects]);
+    useEffect(() => { checklistRef.current = checklistItems; }, [checklistItems]);
+    useEffect(() => { qualityRef.current = qualityChecks; }, [qualityChecks]);
+    useEffect(() => { dayRatingRef.current = dayRating; }, [dayRating]);
+    useEffect(() => { errorsRef.current = errors; }, [errors]);
+    useEffect(() => { hasUnsavedRef.current = hasUnsavedChanges; }, [hasUnsavedChanges]);
+
     // Auto-save every 10 seconds if there are unsaved changes
     useEffect(() => {
         const autoSaveInterval = setInterval(() => {
@@ -251,10 +303,88 @@ function App() {
     // Load data when date changes
     useEffect(() => {
         const loadData = async () => {
+            // Save previous date's unsaved data before loading new date
+            const oldDate = prevDateRef.current;
+            if (oldDate !== date && hasUnsavedRef.current) {
+                try {
+                    const oldSubjects = subjectsRef.current;
+                    await saveToNativeStorage(oldDate, {
+                        subjects: oldSubjects,
+                        checklistItems: checklistRef.current,
+                        qualityChecks: qualityRef.current,
+                        dayRating: dayRatingRef.current,
+                        errors: errorsRef.current,
+                    });
+
+                    // Sync recurring subjects from old date
+                    try {
+                        const existingRecurring = await loadRecurringSubjects();
+                        const recurringMap = {};
+                        for (const r of existingRecurring) {
+                            recurringMap[r.name] = r;
+                        }
+                        for (const s of oldSubjects) {
+                            if (s.recurring) {
+                                recurringMap[s.name] = {
+                                    name: s.name,
+                                    planned: s.planned,
+                                    time: s.time,
+                                    recurring: true,
+                                    recurringAddedDate: recurringMap[s.name]?.recurringAddedDate || oldDate,
+                                    recurringRemovedDate: null,
+                                };
+                            } else if (recurringMap[s.name] && !recurringMap[s.name].recurringRemovedDate) {
+                                recurringMap[s.name].recurringRemovedDate = oldDate;
+                            }
+                        }
+                        await saveRecurringSubjects(Object.values(recurringMap));
+                    } catch (e) {
+                        console.warn('Failed to sync recurring on date change:', e);
+                    }
+
+                    updateWidget(oldSubjects);
+                } catch (error) {
+                    console.error('Failed to save before date change:', error);
+                }
+            }
+            prevDateRef.current = date;
+
             try {
                 const data = await loadFromNativeStorage(date);
                 if (data) {
-                    setSubjects(data.subjects || cloneDefaults(DEFAULT_SUBJECTS));
+                    let loadedSubjects = data.subjects || cloneDefaults(DEFAULT_SUBJECTS);
+
+                    // Merge in any active recurring subjects that are missing from saved data
+                    try {
+                        const allRecurring = await loadRecurringSubjects();
+                        const activeRecurring = allRecurring.filter(r => {
+                            if (r.recurringRemovedDate && r.recurringRemovedDate <= date) return false;
+                            if (r.recurringAddedDate && r.recurringAddedDate > date) return false;
+                            return true;
+                        });
+
+                        const existingNames = new Set(loadedSubjects.map(s => s.name));
+                        const missingRecurring = activeRecurring
+                            .filter(r => !existingNames.has(r.name))
+                            .map((r, idx) => ({
+                                id: Date.now() + idx + 1000,
+                                name: r.name,
+                                planned: r.planned || '60',
+                                actual: '0',
+                                kpi: 'N',
+                                time: r.time || '',
+                                reminder: false,
+                                recurring: true,
+                            }));
+
+                        if (missingRecurring.length > 0) {
+                            loadedSubjects = [...loadedSubjects, ...missingRecurring];
+                        }
+                    } catch (e) {
+                        console.warn('Failed to merge recurring subjects:', e);
+                    }
+
+                    setSubjects(loadedSubjects);
                     setChecklistItems(data.checklistItems || cloneDefaults(DEFAULT_CHECKLIST));
                     setQualityChecks(data.qualityChecks || cloneDefaults(DEFAULT_QUALITY));
                     setDayRating(data.dayRating || '');
@@ -264,7 +394,37 @@ function App() {
                         setLastSaved(data.updatedAt instanceof Date ? data.updatedAt : new Date(data.updatedAt));
                     }
                 } else {
-                    setSubjects(cloneDefaults(DEFAULT_SUBJECTS));
+                    // No saved data for this date — auto-populate from recurring subjects
+                    let recurringSubjects = [];
+                    try {
+                        const allRecurring = await loadRecurringSubjects();
+                        recurringSubjects = allRecurring
+                            .filter(r => {
+                                // Must be active (not removed, or removed after this date)
+                                if (r.recurringRemovedDate && r.recurringRemovedDate <= date) return false;
+                                // Must have been added on or before this date
+                                if (r.recurringAddedDate && r.recurringAddedDate > date) return false;
+                                return true;
+                            })
+                            .map((r, idx) => ({
+                                id: Date.now() + idx,
+                                name: r.name,
+                                planned: r.planned || '60',
+                                actual: '0',
+                                kpi: 'N',
+                                time: r.time || '',
+                                reminder: false,
+                                recurring: true,
+                            }));
+                    } catch (e) {
+                        console.warn('Failed to load recurring subjects:', e);
+                    }
+
+                    if (recurringSubjects.length > 0) {
+                        setSubjects(recurringSubjects);
+                    } else {
+                        setSubjects(cloneDefaults(DEFAULT_SUBJECTS));
+                    }
                     setChecklistItems(cloneDefaults(DEFAULT_CHECKLIST));
                     setQualityChecks(cloneDefaults(DEFAULT_QUALITY));
                     setDayRating('');
@@ -282,6 +442,17 @@ function App() {
         checkForUpdate().then(info => {
             if (info && info.available) {
                 setUpdateInfo(info);
+            }
+        });
+
+        // Check exact alarm permission (Android 12+)
+        NotificationService.checkExactAlarmPermission().then(hasPermission => {
+            if (!hasPermission) {
+                // Only show once per session, check localStorage
+                const alreadyPrompted = localStorage.getItem('alarmPermissionPrompted');
+                if (!alreadyPrompted) {
+                    setShowAlarmPermissionModal(true);
+                }
             }
         });
     }, [date]);
@@ -362,6 +533,20 @@ function App() {
                     onClose={() => setUpdateInfo(null)}
                 />
             )}
+
+            {/* Alarm Permission Modal */}
+            <AlarmPermissionModal
+                isOpen={showAlarmPermissionModal}
+                onClose={() => {
+                    localStorage.setItem('alarmPermissionPrompted', 'true');
+                    setShowAlarmPermissionModal(false);
+                }}
+                onOpenSettings={() => {
+                    localStorage.setItem('alarmPermissionPrompted', 'true');
+                    NotificationService.openExactAlarmSettings();
+                    setShowAlarmPermissionModal(false);
+                }}
+            />
 
             <div className={contentClassName}>
                 <Header

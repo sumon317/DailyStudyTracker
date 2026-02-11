@@ -1,4 +1,5 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 export const NotificationService = {
     // Convert long ID (Date.now()) to 32-bit int for Android
@@ -16,6 +17,55 @@ export const NotificationService = {
         // Ensure strictly positive 31-bit integer to avoid any signed/unsigned confusion
         // We also xor with a magic number to scramble it further from common patterns
         return (Math.abs(hash) ^ 0x5F3759DF) & 0x7FFFFFFF;
+    },
+
+    // Check if exact alarm permission is granted (Android 12+)
+    async checkExactAlarmPermission() {
+        if (!Capacitor.isNativePlatform()) return true; // Web always "has" permission
+
+        try {
+            // Use Capacitor's checkPermissions which includes exactAlarm on newer plugin versions
+            const result = await LocalNotifications.checkPermissions();
+            // On Android 12+, exactAlarm will be 'denied' if not granted
+            // Some plugin versions return this, some don't
+            if (result.exactAlarm !== undefined) {
+                return result.exactAlarm === 'granted';
+            }
+            // Fallback: assume granted if not reported
+            return true;
+        } catch (error) {
+            console.error('Failed to check exact alarm permission:', error);
+            return true; // Assume granted on error
+        }
+    },
+
+    // Open system settings for exact alarm permission
+    async openExactAlarmSettings() {
+        if (!Capacitor.isNativePlatform()) return;
+
+        try {
+            // This opens the app's alarm permission settings on Android 12+
+            // We use the App plugin if available, otherwise fallback to manual intent
+            const { App } = await import('@capacitor/app');
+            // Unfortunately, Capacitor doesn't have a direct API for this
+            // We'll use a workaround by opening app info
+            await App.openUrl({ url: `package:${await this.getPackageName()}` });
+        } catch (error) {
+            // Fallback: just alert the user
+            console.error('Could not open settings:', error);
+            alert('Please go to Settings > Apps > Daily Study Tracker > Alarms & Reminders and enable the permission.');
+        }
+    },
+
+    // Get package name helper
+    async getPackageName() {
+        try {
+            const { App } = await import('@capacitor/app');
+            const info = await App.getInfo();
+            return info.id;
+        } catch {
+            return 'com.sumon.studytracker';
+        }
     },
 
     // Request permissions
