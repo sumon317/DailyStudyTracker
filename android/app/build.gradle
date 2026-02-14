@@ -19,12 +19,13 @@ android {
     }
     signingConfigs {
         release {
-            if (System.getenv("KEYSTORE_PASSWORD")) {
-                storeFile = file("release-key.jks")
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
-            }
+            // Strictly enforce signing configuration to debug missing secrets
+            println "DEBUG: Configuring release signing. KEYSTORE_PASSWORD present: " + (System.getenv("KEYSTORE_PASSWORD") != null)
+            
+            storeFile = file("release-key.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
         }
     }
 
