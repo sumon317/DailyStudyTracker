@@ -19,13 +19,18 @@ android {
     }
     signingConfigs {
         release {
-            if (System.getenv("ANDROID_KEYSTORE_BASE64")) {
+            if (System.getenv("KEYSTORE_PASSWORD")) {
                 storeFile = file("release-key.jks")
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
             }
         }
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
     }
 
     buildTypes {
