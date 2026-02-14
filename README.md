@@ -129,16 +129,12 @@ DailyStudyTracker/
 ## 📸 Screenshots
 
 <p float="left">
-  <img src="screenshots/Screenshot_20260203-142355.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142411.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142434.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142443.png" width="200" /> 
-  <img src="screenshots/Screenshot_20260203-142451.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142505.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142731.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142753.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142802.png" width="200" />
-  <img src="screenshots/Screenshot_20260203-142812.png" width="200" />
+  <img src="screenshots/Screenshot_2026-02-14-16-03-08-55_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
+  <img src="screenshots/Screenshot_2026-02-14-16-03-12-06_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
+  <img src="screenshots/Screenshot_2026-02-14-16-03-14-75_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
+  <img src="screenshots/Screenshot_2026-02-14-16-03-17-01_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" /> 
+  <img src="screenshots/Screenshot_2026-02-14-16-03-19-71_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
+  <img src="screenshots/Screenshot_2026-02-14-16-05-07-36_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
 </p>
 
 ## 🤝 Contributing
