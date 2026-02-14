@@ -7,9 +7,8 @@ android {
         applicationId "com.sumon.studytracker"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // Auto-increment versionCode based on timestamp (seconds)
-        // This ensures every build is considered an "update" by Android
-        versionCode (System.currentTimeMillis() / 1000).toInteger()
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 5
         versionName "1.0.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
