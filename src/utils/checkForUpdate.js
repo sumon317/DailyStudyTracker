@@ -17,8 +17,10 @@ const CURRENT_VERSION = packageJson.version;
  * @returns {Promise<UpdateResult>}
  */
 export const checkForUpdate = async () => {
-    // Only run on native Android to avoid annoying web users (or run on both if desired)
-    // For now, let's allow it everywhere but the download link will differ
+    // Only run on native Android to avoid annoying web users
+    if (!Capacitor.isNativePlatform()) {
+        return { available: false };
+    }
 
     try {
         const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
