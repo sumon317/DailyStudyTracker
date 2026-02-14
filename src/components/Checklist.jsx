@@ -3,7 +3,7 @@ import { CheckSquare, Plus, Trash2 } from 'lucide-react';
 
 const ChecklistItem = memo(({ item, onToggle, onUpdateLabel, onRemove }) => (
     <div
-        className={`group flex items-center gap-2 sm:gap-3 rounded-lg border p-2 sm:p-3 transition-colors ${item.checked
+        className={`group flex items-center gap-2 sm:gap-3 rounded-lg border p-3 sm:p-3 transition-colors ${item.checked
             ? 'border-app-primary/30 bg-app-primary/5'
             : 'border-app-border hover:bg-app-bg'
             }`}
@@ -58,7 +58,7 @@ const Checklist = memo(({ items, setItems }) => {
     }, [setItems]);
 
     return (
-        <div className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6 shadow-sm">
+        <div className="rounded-xl border border-app-border bg-app-surface p-3 sm:p-5 shadow-sm">
             <div className="mb-3 sm:mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <CheckSquare className="text-app-primary" size={18} />

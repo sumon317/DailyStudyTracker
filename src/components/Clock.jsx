@@ -28,8 +28,8 @@ const Clock = memo(() => {
     });
 
     return (
-        <div className="flex items-center gap-2 rounded-lg border border-app-border bg-app-surface px-4 py-2 font-mono text-sm font-semibold text-app-text-main shadow-sm transition-colors">
-            <ClockIcon size={16} className="text-app-primary" />
+        <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-xs sm:text-sm font-semibold text-app-text-main transition-colors">
+            <ClockIcon size={14} className="text-app-primary sm:w-4 sm:h-4" />
             <span>{timeString}</span>
         </div>
     );

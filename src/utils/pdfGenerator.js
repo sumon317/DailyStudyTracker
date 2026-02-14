@@ -12,7 +12,7 @@ export const generatePDF = async (data) => {
     // Title
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("6-Hour Daily Study Tracker", 14, 22);
+    doc.text("Daily Study Tracker", 14, 22);
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");

@@ -59,7 +59,7 @@ const COLORS = [
 ];
 
 const StudyCharts = memo(({ subjects }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
 
     const toggleOpen = useCallback(() => setIsOpen(prev => !prev), []);
 

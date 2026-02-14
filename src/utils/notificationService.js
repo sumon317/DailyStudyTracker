@@ -80,26 +80,65 @@ export const NotificationService = {
     },
 
     // Initialize/Create Channel (Android specific functionality for better control)
-    async createChannel() {
+    async initialize() {
+        if (!Capacitor.isNativePlatform()) return;
+
         try {
-            // High importance (5) with custom sound for alarm-like behavior
+            // New channel ID to bypass Android immutability
+            const channelId = 'study-alarms-v3';
+
             await LocalNotifications.createChannel({
-                id: 'study-reminders',
-                name: 'Study Reminders',
-                description: 'High Importance Alarm for Study',
+                id: channelId,
+                name: 'Study Alarms (High Volume)',
+                description: 'Persistent and loud alarms for study tasks',
                 importance: 5,
                 visibility: 1,
                 vibration: true,
-                sound: 'alarm_loop.mp3', // Uses res/raw/alarm_loop.mp3
+                sound: 'alarm_loop.mp3',
             });
+
+            await LocalNotifications.registerActionTypes({
+                types: [
+                    {
+                        id: 'TODO_ACTIONS',
+                        actions: [
+                            { id: 'mark-done', title: 'Mark as Done', foreground: true }
+                        ]
+                    },
+                    {
+                        id: 'ALARM_ACTIONS',
+                        actions: [
+                            { id: 'dismiss', title: 'Dismiss', foreground: false }
+                        ]
+                    }
+                ]
+            });
+
+            console.log('NotificationService: Channels and Actions initialized');
         } catch (error) {
-            // Ignore error on web/ios
-            console.log('Channel creation skipped or failed');
+            console.error('NotificationService: Initialization failed', error);
         }
     },
 
+    // Listener setup
+    initListeners(callback) {
+        // Remove existing listener if any (manual cleanup if needed, but Capacitor handles duplicate listeners better now)
+        LocalNotifications.removeAllListeners();
+
+        LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+            console.log('Notification action performed:', notification);
+            const originalId = notification.notification.extra?.originalId;
+            const actionId = notification.actionId;
+            const actionType = notification.notification.actionTypeId;
+
+            if (originalId && callback) {
+                callback({ originalId, actionId, actionType });
+            }
+        });
+    },
+
     // Schedule a notification
-    async scheduleNotification(originalId, title, body, date) {
+    async scheduleNotification(originalId, title, body, date, actionType = 'ALARM_ACTIONS') {
         try {
             const id = this.safeId(originalId);
 
@@ -107,11 +146,8 @@ export const NotificationService = {
             const hasPermission = await this.checkPermissions();
             if (!hasPermission) {
                 const granted = await this.requestPermissions();
-                if (!granted) return { success: false, error: 'Permission not granted (request rejected)' };
+                if (!granted) return { success: false, error: 'Permission not granted' };
             }
-
-            // Ensure channel exists
-            await this.createChannel();
 
             // Schedule
             await LocalNotifications.schedule({
@@ -119,11 +155,13 @@ export const NotificationService = {
                     title,
                     body,
                     id,
-                    schedule: { at: date, allowWhileIdle: true }, // allowWhileIdle helps in doze mode
+                    schedule: { at: date, allowWhileIdle: true },
                     smallIcon: 'ic_stat_icon_config_sample',
-                    channelId: 'study-reminders', // Use our high priority channel
-                    actionTypeId: '',
-                    extra: { originalId } // Keep original ID in extras just in case
+                    channelId: 'study-alarms-v3', // Match initialize()
+                    actionTypeId: actionType,
+                    ongoing: true,
+                    autoCancel: true,
+                    extra: { originalId }
                 }]
             });
             return { success: true };

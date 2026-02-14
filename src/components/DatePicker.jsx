@@ -23,7 +23,7 @@ const DayButton = memo(({ day, isSelected, isToday, onClick }) => (
 
 DayButton.displayName = 'DayButton';
 
-const DatePicker = memo(({ date, setDate }) => {
+const DatePicker = memo(({ date, setDate, compact = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [viewDate, setViewDate] = useState(() => new Date(date));
     const containerRef = useRef(null);
@@ -106,6 +106,14 @@ const DatePicker = memo(({ date, setDate }) => {
         });
     }, [date]);
 
+    const compactFormattedDate = useMemo(() => {
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
+    }, [date]);
+
     const monthYearLabel = useMemo(() => {
         return viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     }, [viewDate]);
@@ -115,21 +123,23 @@ const DatePicker = memo(({ date, setDate }) => {
             {/* Trigger Card */}
             <div
                 onClick={toggleOpen}
-                className={`group flex w-full cursor-pointer items-center justify-between overflow-hidden rounded-xl border bg-app-surface p-4 sm:p-6 shadow-sm transition-all hover:shadow-md
+                className={`group flex w-full cursor-pointer items-center justify-between overflow-hidden rounded-xl border bg-app-surface shadow-sm transition-all hover:shadow-md
+                    ${compact ? 'px-3 py-2' : 'p-4 sm:p-6'}
                     ${isOpen ? 'border-app-primary ring-1 ring-app-primary' : 'border-app-border hover:border-app-primary'}
                 `}
             >
                 <div className="flex flex-col gap-0.5 sm:gap-1">
-                    <label className="text-xs sm:text-sm font-medium text-app-text-muted">Study Date</label>
-                    <div className="text-base sm:text-xl font-bold text-app-text-main group-hover:text-app-primary transition-colors">
-                        {formattedDate}
+                    {!compact && <label className="text-xs sm:text-sm font-medium text-app-text-muted">Study Date</label>}
+                    <div className={`font-bold text-app-text-main group-hover:text-app-primary transition-colors ${compact ? 'text-sm' : 'text-base sm:text-xl'}`}>
+                        {compact ? compactFormattedDate : formattedDate}
                     </div>
                 </div>
 
-                <div className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg transition-colors
+                <div className={`flex items-center justify-center rounded-lg transition-colors
+                    ${compact ? 'h-7 w-7' : 'h-8 w-8 sm:h-10 sm:w-10'}
                     ${isOpen ? 'bg-app-primary text-app-primary-fg' : 'bg-app-primary/10 text-app-primary group-hover:bg-app-primary group-hover:text-app-primary-fg'}
                 `}>
-                    <CalendarIcon size={18} className="sm:w-5 sm:h-5" />
+                    <CalendarIcon size={compact ? 14 : 18} className={compact ? '' : 'sm:w-5 sm:h-5'} />
                 </div>
             </div>
 
@@ -141,7 +151,9 @@ const DatePicker = memo(({ date, setDate }) => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute left-0 right-0 sm:right-auto top-full z-50 mt-2 w-full sm:min-w-[300px] overflow-hidden rounded-xl border border-app-border bg-app-surface p-3 sm:p-4 shadow-xl ring-1 ring-black/5"
+                        className={`absolute top-full z-50 mt-2 overflow-hidden rounded-xl border border-app-border bg-app-surface p-3 sm:p-4 shadow-xl ring-1 ring-black/5
+                            ${compact ? 'left-0 w-[280px]' : 'left-0 right-0 sm:right-auto w-full sm:min-w-[300px]'}
+                        `}
                     >
                         {/* Header */}
                         <div className="mb-3 sm:mb-4 flex items-center justify-between">

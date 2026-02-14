@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 export const generateMarkdown = async (data) => {
     const { date, subjects, checklistItems, qualityChecks, dayRating, errors } = data;
 
-    let md = `# 6-Hour Daily Study Tracker\n\n`;
+    let md = `# Daily Study Tracker\n\n`;
     md += `**Date:** ${date}\n\n`;
 
     // Table

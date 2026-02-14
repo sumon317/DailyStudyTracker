@@ -9,7 +9,7 @@ const CountdownTimer = memo(() => {
     const [isActive, setIsActive] = useState(false);
     const [initialTime, setInitialTime] = useState(1800);
     const [isEditing, setIsEditing] = useState(false);
-    const [isOpen, setIsOpen] = useState(false); // Collapsed by default
+    const [isOpen, setIsOpen] = useState(true); // Default to open
 
     // Input state
     const [hoursInput, setHoursInput] = useState(0);
@@ -202,14 +202,14 @@ const CountdownTimer = memo(() => {
                         transition={{ duration: 0.3 }}
                         className="overflow-hidden"
                     >
-                        <div className="p-6 flex flex-col items-center justify-center gap-6 min-h-[200px]">
+                        <div className="p-5 flex flex-col items-center justify-center gap-6 min-h-[200px]">
                             {/* Time Display or Editor */}
                             <div className="relative w-full flex justify-center">
                                 {isEditing ? (
                                     <motion.div
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="flex flex-col items-center gap-4 bg-app-bg p-4 rounded-xl border border-app-primary/30 shadow-lg"
+                                        className="flex flex-col items-center gap-4 bg-app-bg p-4 rounded-xl border border-app-primary/30 shadow-lg w-full"
                                     >
                                         <div className="flex items-end gap-2 text-app-text-main">
                                             <div className="flex flex-col items-center gap-1">
@@ -286,7 +286,7 @@ const CountdownTimer = memo(() => {
                             {!isEditing && (
                                 <>
                                     {/* Progress Bar */}
-                                    <div className="w-full h-2 bg-app-bg rounded-full overflow-hidden max-w-xs ring-1 ring-app-border/50">
+                                    <div className="w-full h-2 bg-app-bg rounded-full overflow-hidden ring-1 ring-app-border/50">
                                         <motion.div
                                             className="h-full bg-app-primary"
                                             initial={{ width: "100%" }}

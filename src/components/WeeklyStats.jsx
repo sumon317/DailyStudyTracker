@@ -49,12 +49,12 @@ const Bar = memo(({ height, actual, planned, label, isToday, maxHeight = 100 }) 
                     animate={{ height: `${barHeight}%` }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                     className={`absolute bottom-0 left-0 right-0 rounded-t-md ${percentage >= 80
-                            ? 'bg-app-accent-success'
-                            : percentage >= 50
-                                ? 'bg-app-accent-warning'
-                                : actual > 0
-                                    ? 'bg-app-accent-error'
-                                    : 'bg-app-border'
+                        ? 'bg-app-accent-success'
+                        : percentage >= 50
+                            ? 'bg-app-accent-warning'
+                            : actual > 0
+                                ? 'bg-app-accent-error'
+                                : 'bg-app-border'
                         }`}
                 />
             </div>
@@ -84,7 +84,7 @@ const StatCard = memo(({ icon: Icon, label, value, subtext, color = 'text-app-pr
 StatCard.displayName = 'StatCard';
 
 const WeeklyStats = memo(({ currentDate }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
     const [weekOffset, setWeekOffset] = useState(0);
     const [weekData, setWeekData] = useState({});
     const [loading, setLoading] = useState(false);

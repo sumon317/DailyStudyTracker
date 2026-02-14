@@ -80,9 +80,9 @@ const QualityCheck = memo(({ checks, setChecks, rating, setRating }) => {
     }, [setRating]);
 
     return (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
             {/* Quality Check Section */}
-            <div className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6 shadow-sm">
+            <div className="rounded-xl border border-app-border bg-app-surface p-3 sm:p-6 shadow-sm">
                 <div className="mb-3 sm:mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Award className="text-app-primary" size={18} />
@@ -119,7 +119,7 @@ const QualityCheck = memo(({ checks, setChecks, rating, setRating }) => {
             </div>
 
             {/* Day Rating Section */}
-            <div className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6 shadow-sm">
+            <div className="rounded-xl border border-app-border bg-app-surface p-3 sm:p-6 shadow-sm">
                 <div className="mb-3 sm:mb-4 flex items-center gap-2">
                     <Sun className="text-app-accent-warning" size={18} />
                     <h2 className="text-base sm:text-lg font-semibold text-app-text-main">Day Rating</h2>

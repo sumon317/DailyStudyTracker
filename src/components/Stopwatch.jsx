@@ -41,28 +41,28 @@ const Stopwatch = memo(() => {
     const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
     return (
-        <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-app-text-main">
-                <Timer size={16} className="text-app-primary" />
+        <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-semibold text-app-text-main">
+                <Timer size={14} className="text-app-primary sm:w-4 sm:h-4" />
                 <span className="font-mono">{timeString}</span>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-0.5">
                 <button
                     onClick={handleStartPause}
-                    className={`p-1.5 rounded-lg transition-colors ${isRunning
-                            ? 'bg-app-accent-warning/20 text-app-accent-warning hover:bg-app-accent-warning/30'
-                            : 'bg-app-accent-success/20 text-app-accent-success hover:bg-app-accent-success/30'
+                    className={`p-1 sm:p-1.5 rounded-lg transition-colors ${isRunning
+                        ? 'bg-app-accent-warning/20 text-app-accent-warning hover:bg-app-accent-warning/30'
+                        : 'bg-app-accent-success/20 text-app-accent-success hover:bg-app-accent-success/30'
                         }`}
                     title={isRunning ? 'Pause' : 'Start'}
                 >
-                    {isRunning ? <Pause size={14} /> : <Play size={14} />}
+                    {isRunning ? <Pause size={12} /> : <Play size={12} />}
                 </button>
                 <button
                     onClick={handleReset}
-                    className="p-1.5 rounded-lg bg-app-bg text-app-text-muted hover:bg-app-border transition-colors"
+                    className="p-1 sm:p-1.5 rounded-lg bg-app-bg text-app-text-muted hover:bg-app-border transition-colors"
                     title="Reset"
                 >
-                    <RotateCcw size={14} />
+                    <RotateCcw size={12} />
                 </button>
             </div>
         </div>

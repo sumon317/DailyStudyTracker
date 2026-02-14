@@ -70,7 +70,7 @@ const ErrorLog = memo(({ errors, setErrors }) => {
     }, [setErrors]);
 
     return (
-        <div className="rounded-xl border border-app-border bg-app-surface p-4 sm:p-6 shadow-sm">
+        <div className="rounded-xl border border-app-border bg-app-surface p-3 sm:p-6 shadow-sm">
             <div className="mb-3 sm:mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <AlertCircle className="text-app-accent-error" size={18} />

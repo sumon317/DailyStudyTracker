@@ -53,3 +53,8 @@ test_collision.js
 .cache/
 .parcel-cache/
 *.tsbuildinfo
+
+# Security - Release Keys (Do NOT commit these)
+*.jks
+*.keystore
+key_base64.txt
