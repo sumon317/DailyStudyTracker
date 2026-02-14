@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Build Web App
+        run: bun run build  # <--- Generating dist/ folder
+
       - name: Sync Capacitor
         run: bun cap sync android
 
