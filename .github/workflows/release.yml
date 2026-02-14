@@ -29,6 +29,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Bump Version from Tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Setting version to $VERSION"
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          
+          # Update build.gradle versionName
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" android/app/build.gradle
+
       - name: Build Web App
         run: bun run build
 
