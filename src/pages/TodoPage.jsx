@@ -74,25 +74,21 @@ const TodoPage = ({ todos, setTodos }) => {
         } else {
             // Turn on
             const [hours, minutes] = todo.time.split(':');
-            const now = new Date();
-            let scheduledTime = new Date();
-            scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            const h = parseInt(hours, 10);
+            const m = parseInt(minutes, 10);
 
-            // If time has passed today, schedule for tomorrow
-            if (scheduledTime <= now) {
-                scheduledTime.setDate(scheduledTime.getDate() + 1);
-            }
-
-            const result = await NotificationService.scheduleNotification(
+            const result = await NotificationService.scheduleDailyNotification(
                 id,
                 `ToDo Reminder`,
                 `Don't forget: ${todo.text}`,
-                scheduledTime,
+                h,
+                m,
                 'TODO_ACTIONS'
             );
 
             if (result.success) {
                 setTodos(todos.map(t => t.id === id ? { ...t, reminder: true } : t));
+                alert(`Reminder scheduled to repeat daily at ${todo.time}.`);
             } else {
                 alert(`Failed to schedule notification: ${result.error || 'Unknown error'}`);
             }

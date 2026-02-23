@@ -121,9 +121,19 @@ export const NotificationService = {
     },
 
     // Listener setup
-    initListeners(callback) {
+    initListeners(onActionCallback, onReceiveCallback) {
         // Remove existing listener if any (manual cleanup if needed, but Capacitor handles duplicate listeners better now)
         LocalNotifications.removeAllListeners();
+
+        LocalNotifications.addListener('localNotificationReceived', (notification) => {
+            console.log('Notification received (fired):', notification);
+            const originalId = notification.extra?.originalId || notification.id;
+            const actionType = notification.actionTypeId;
+
+            if (onReceiveCallback) {
+                onReceiveCallback({ originalId, actionType });
+            }
+        });
 
         LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
             console.log('Notification action performed:', notification);
@@ -131,8 +141,8 @@ export const NotificationService = {
             const actionId = notification.actionId;
             const actionType = notification.notification.actionTypeId;
 
-            if (originalId && callback) {
-                callback({ originalId, actionId, actionType });
+            if (originalId && onActionCallback) {
+                onActionCallback({ originalId, actionId, actionType });
             }
         });
     },
@@ -167,6 +177,44 @@ export const NotificationService = {
             return { success: true };
         } catch (error) {
             console.error('Failed to schedule notification:', error);
+            return { success: false, error: error.message || JSON.stringify(error) };
+        }
+    },
+
+    // Schedule a daily recurring notification
+    async scheduleDailyNotification(originalId, title, body, hour, minute, actionType = 'TODO_ACTIONS') {
+        try {
+            const id = this.safeId(originalId);
+
+            // Ensure permissions
+            const hasPermission = await this.checkPermissions();
+            if (!hasPermission) {
+                const granted = await this.requestPermissions();
+                if (!granted) return { success: false, error: 'Permission not granted' };
+            }
+
+            // Schedule recurring daily
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title,
+                    body,
+                    id,
+                    schedule: {
+                        on: { hour, minute },
+                        allowWhileIdle: true,
+                        repeats: true
+                    },
+                    smallIcon: 'ic_stat_icon_config_sample',
+                    channelId: 'study-alarms-v3', // Match initialize()
+                    actionTypeId: actionType,
+                    ongoing: true,
+                    autoCancel: true,
+                    extra: { originalId }
+                }]
+            });
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to schedule daily notification:', error);
             return { success: false, error: error.message || JSON.stringify(error) };
         }
     },

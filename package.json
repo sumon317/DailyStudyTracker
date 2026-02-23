@@ -19,6 +19,7 @@
     "@capacitor/core": "^8.0.2",
     "@capacitor/filesystem": "^8.1.0",
     "@capacitor/local-notifications": "^8.0.0",
+    "@capawesome-team/capacitor-android-foreground-service": "^8.0.1",
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",
     "framer-motion": "^11.0.8",

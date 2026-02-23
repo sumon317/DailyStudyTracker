@@ -3,8 +3,10 @@ import { Timer, Play, Pause, RotateCcw, X, Check, ChevronDown, Plus } from 'luci
 import { motion, AnimatePresence } from 'framer-motion';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 
-const CountdownTimer = memo(() => {
+const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }) => {
     const [timeLeft, setTimeLeft] = useState(1800); // Default 30 minutes (in seconds)
     const [isActive, setIsActive] = useState(false);
     const [initialTime, setInitialTime] = useState(1800);
@@ -17,87 +19,157 @@ const CountdownTimer = memo(() => {
     const [secondsInput, setSecondsInput] = useState(0);
 
     const intervalRef = useRef(null);
+    const endTimeRef = useRef(null);
 
-    // Initial notification setup
+    const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
+    const audioRef = useRef(null);
+    const audioCtxRef = useRef(null);
+    const gainNodeRef = useRef(null);
+    const sourceNodeRef = useRef(null);
+
+    // Initialize audio object
     useEffect(() => {
+        const audio = new Audio('/alarm_loop.mp3');
+        audio.loop = true; // Make it play continuously
+        audio.crossOrigin = "anonymous";
+        audioRef.current = audio;
+
         if ('Notification' in window && Notification.permission !== 'granted') {
             Notification.requestPermission();
         }
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+            if (audioCtxRef.current) {
+                audioCtxRef.current.close().catch(() => { });
+                audioCtxRef.current = null;
+            }
+        };
     }, []);
 
     const playAlarm = useCallback(async () => {
-        // 1. Vibrate
-        if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 1000]);
+        setIsAlarmPlaying(true);
 
-        // 2. Play Sound (Oscillator beep)
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const playBeep = (startTime) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, startTime);
-                osc.frequency.exponentialRampToValueAtTime(440, startTime + 0.5);
-                gain.gain.setValueAtTime(0.5, startTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
-                osc.start(startTime);
-                osc.stop(startTime + 0.5);
-            };
-            // Play 3 times
-            const now = ctx.currentTime;
-            playBeep(now);
-            playBeep(now + 0.6);
-            playBeep(now + 1.2);
-        } catch (e) {
-            console.error("Audio play failed", e);
+        // 1. Vibrate continuously 
+        if (navigator.vibrate) navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+
+        // 2. Play continuous loud Audio via Web Audio API Gain Node
+        if (audioRef.current) {
+            try {
+                if (!audioCtxRef.current) {
+                    const CtxClass = window.AudioContext || window.webkitAudioContext;
+                    audioCtxRef.current = new CtxClass();
+                    gainNodeRef.current = audioCtxRef.current.createGain();
+                    gainNodeRef.current.gain.value = 5.0;
+                    gainNodeRef.current.connect(audioCtxRef.current.destination);
+
+                    sourceNodeRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current);
+                    sourceNodeRef.current.connect(gainNodeRef.current);
+                }
+
+                if (audioCtxRef.current.state === 'suspended') {
+                    await audioCtxRef.current.resume();
+                }
+
+                audioRef.current.currentTime = 0;
+                await audioRef.current.play();
+            } catch (e) {
+                console.error("Audio playback/gain blocked", e);
+                audioRef.current.play().catch(err => console.error(err));
+            }
         }
 
-        // 3. Native Notification
-        try {
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: "Time's Up!",
-                    body: "Your focus session is complete.",
-                    id: 1,
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null, // Use default
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-        } catch (e) {
-            // Fallback to web notification
+        // 3. Fallback Web Notification (if native fails or not handled)
+        if (!Capacitor.isNativePlatform()) {
             if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification("Time's Up!", { body: "Your focus session is complete." });
             }
         }
     }, []);
 
+    // Format time: HH:MM:SS
+    const formatTimeDisplay = (totalSeconds) => {
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
     // WakeLock & Timer Logic
     useEffect(() => {
-        const manageWakeLock = async () => {
+        const manageServices = async () => {
             if (isActive) {
                 await KeepAwake.keepAwake();
+                if (Capacitor.getPlatform() === 'android') {
+                    try {
+                        const status = await ForegroundService.checkPermissions();
+                        if (status.display !== 'granted') {
+                            const request = await ForegroundService.requestPermissions();
+                            if (request.display !== 'granted') {
+                                console.warn('Foreground service permissions not granted');
+                                return; // Don't start the service if permissions are not granted
+                            }
+                        }
+
+                        // Try requesting manage overlay permissions if needed (usually older/custom Android)
+                        const overlayStatus = await ForegroundService.checkManageOverlayPermission();
+                        if (!overlayStatus.granted) {
+                            await ForegroundService.requestManageOverlayPermission().catch(() => { });
+                        }
+
+                        await ForegroundService.startForegroundService({
+                            id: 111,
+                            title: "Focus Timer",
+                            body: "Time remaining: " + formatTimeDisplay(timeLeft),
+                            smallIcon: "ic_timer_icon",
+                            serviceType: 1073741824, // FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                            silent: true
+                        });
+                    } catch (e) { console.error("Foreground start error", e); }
+                }
             } else {
                 await KeepAwake.allowSleep();
+                if (Capacitor.getPlatform() === 'android') {
+                    try {
+                        await ForegroundService.stopForegroundService();
+                    } catch (e) { console.error("Foreground stop error", e); }
+                }
             }
         };
-        manageWakeLock();
+
+        manageServices();
 
         if (isActive && timeLeft > 0) {
             intervalRef.current = setInterval(() => {
-                setTimeLeft((time) => {
-                    if (time <= 1) {
-                        clearInterval(intervalRef.current);
-                        setIsActive(false);
-                        playAlarm();
-                        return 0;
+                if (!endTimeRef.current) return;
+
+                const now = Date.now();
+                const remaining = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000));
+
+                setTimeLeft(remaining);
+
+                if (remaining <= 0) {
+                    clearInterval(intervalRef.current);
+                    setIsActive(false);
+                    playAlarm();
+                } else {
+                    if (Capacitor.getPlatform() === 'android') {
+                        ForegroundService.updateForegroundService({
+                            id: 111,
+                            title: "Focus Timer",
+                            body: "Time remaining: " + formatTimeDisplay(remaining),
+                            smallIcon: "ic_timer_icon",
+                            silent: true
+                        }).catch(() => { });
                     }
-                    return time - 1;
-                });
+                }
             }, 1000);
         } else if (!isActive && intervalRef.current) {
             clearInterval(intervalRef.current);
@@ -105,31 +177,87 @@ const CountdownTimer = memo(() => {
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
-            // Don't disable wakelock here to avoid flickering logic, 
-            // but normally we should allow sleep on unmount.
+            // On unmount allow sleep
             KeepAwake.allowSleep();
         };
-    }, [isActive, timeLeft, playAlarm]);
+    }, [isActive, playAlarm]); // Intentional omission of timeLeft to avoid resetting interval
+
+    const stopAlarm = useCallback(() => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        setIsAlarmPlaying(false);
+    }, []);
 
     const addTenSeconds = useCallback(() => {
+        if (isActive && endTimeRef.current) {
+            endTimeRef.current += 10000;
+        }
         setTimeLeft(prev => prev + 10);
-    }, []);
+    }, [isActive]);
 
     const addThirtySeconds = useCallback(() => {
+        if (isActive && endTimeRef.current) {
+            endTimeRef.current += 30000;
+        }
         setTimeLeft(prev => prev + 30);
-    }, []);
-
-    const toggleTimer = useCallback(() => {
-        setIsActive(!isActive);
     }, [isActive]);
+
+    const toggleTimer = useCallback(async () => {
+        if (!isActive && timeLeft > 0) {
+            const end = Date.now() + timeLeft * 1000;
+            endTimeRef.current = end;
+            setIsActive(true);
+            stopAlarm();
+
+            // Schedule notification for the exact end time NOW
+            // This ensures it fires even if JS is throttled in the background
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    await LocalNotifications.schedule({
+                        notifications: [{
+                            title: "Time's Up!",
+                            body: "Your focus session is complete.",
+                            id: 101, // Unique ID for Focus Timer
+                            schedule: { at: new Date(end), allowWhileIdle: true },
+                            smallIcon: 'ic_timer_icon',
+                            channelId: 'study-alarms-v3',
+                            actionTypeId: 'FOCUS_ALARM', // No global stop button
+                            extra: { originalId: 'focus_timer_end' }
+                        }]
+                    });
+                } catch (e) { console.error("Scheduling upfront notification failed", e); }
+            }
+        } else if (isActive) {
+            const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+            setTimeLeft(remaining);
+            endTimeRef.current = null;
+            setIsActive(false);
+
+            // Cancel any pending notification
+            if (Capacitor.isNativePlatform()) {
+                LocalNotifications.cancel({ notifications: [{ id: 101 }] }).catch(() => { });
+            }
+        }
+    }, [isActive, timeLeft, stopAlarm]);
 
     const resetTimer = useCallback(() => {
         setIsActive(false);
+        endTimeRef.current = null;
         setTimeLeft(initialTime);
-    }, [initialTime]);
+        stopAlarm();
+
+        // Cancel any pending notification
+        if (Capacitor.isNativePlatform()) {
+            LocalNotifications.cancel({ notifications: [{ id: 101 }] }).catch(() => { });
+        }
+    }, [initialTime, stopAlarm]);
 
     const openEditor = useCallback(() => {
         setIsActive(false);
+        endTimeRef.current = null;
+        stopAlarm();
         // Convert current timeLeft back to inputs
         const h = Math.floor(timeLeft / 3600);
         const m = Math.floor((timeLeft % 3600) / 60);
@@ -148,18 +276,6 @@ const CountdownTimer = memo(() => {
             setIsEditing(false);
         }
     }, [hoursInput, minutesInput, secondsInput]);
-
-    // Format time: HH:MM:SS
-    const formatTimeDisplay = (totalSeconds) => {
-        const h = Math.floor(totalSeconds / 3600);
-        const m = Math.floor((totalSeconds % 3600) / 60);
-        const s = totalSeconds % 60;
-
-        if (h > 0) {
-            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
 
     const handleInputChange = (setter) => (e) => {
         const val = parseInt(e.target.value) || 0;
@@ -202,7 +318,37 @@ const CountdownTimer = memo(() => {
                         transition={{ duration: 0.3 }}
                         className="overflow-hidden"
                     >
-                        <div className="p-5 flex flex-col items-center justify-center gap-6 min-h-[200px]">
+                        <div className="p-5 flex flex-col items-center justify-center gap-6 min-h-[200px] relative">
+                            {/* Alarm Overlay */}
+                            <AnimatePresence>
+                                {(isAlarmPlaying || globalAlarmSource === 'FOCUS_ALARM') && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-app-bg/95 backdrop-blur-sm rounded-xl border border-app-accent-warning/50 p-6"
+                                    >
+                                        <motion.div
+                                            animate={{ scale: [1, 1.1, 1] }}
+                                            transition={{ repeat: Infinity, duration: 1.5 }}
+                                            className="text-app-accent-warning mb-4"
+                                        >
+                                            <Timer size={48} />
+                                        </motion.div>
+                                        <h3 className="text-xl font-bold text-app-text-main mb-6">Time's Up!</h3>
+                                        <button
+                                            onClick={() => {
+                                                stopAlarm();
+                                                if (stopGlobalAlarm) stopGlobalAlarm();
+                                            }}
+                                            className="w-full py-3 px-6 rounded-xl bg-app-accent-warning text-white font-bold text-lg shadow-lg shadow-app-accent-warning/20 hover:bg-app-accent-warning/90 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            <X size={24} /> Stop Alarm
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             {/* Time Display or Editor */}
                             <div className="relative w-full flex justify-center">
                                 {isEditing ? (
@@ -295,7 +441,6 @@ const CountdownTimer = memo(() => {
                                         />
                                     </div>
 
-                                    {/* Controls */}
                                     {/* Controls */}
                                     <div className="flex flex-col items-center gap-6">
                                         {/* Main Play/Pause Button */}

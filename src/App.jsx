@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
-import { Download, FileText, Upload, Save, MoreVertical } from 'lucide-react';
+import { Download, FileText, Upload, Save, MoreVertical, Timer, X } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -19,7 +21,7 @@ import DatePicker from './components/DatePicker';
 // Utils
 import { generatePDF } from './utils/pdfGenerator';
 import { generateMarkdown } from './utils/mdGenerator';
-import { saveToNativeStorage, loadFromNativeStorage, downloadBackup, handleFileImport, saveRecurringSubjects, loadRecurringSubjects } from './db';
+import { saveToNativeStorage, loadFromNativeStorage, downloadBackup, handleFileImport, saveRecurringSubjects, loadRecurringSubjects, saveGlobalTodos, loadGlobalTodos } from './db';
 import { updateWidget } from './utils/widgetBridge';
 import { checkForUpdate } from './utils/checkForUpdate';
 import { NotificationService } from './utils/notificationService';
@@ -259,6 +261,95 @@ function App() {
     const [updateInfo, setUpdateInfo] = useState(null);
     const [showAlarmPermissionModal, setShowAlarmPermissionModal] = useState(false);
 
+    // Global Alarm State
+    const [globalAlarmSource, setGlobalAlarmSource] = useState(null); // stores actionType e.g. 'FOCUS_ALARM'
+    const globalAudioRef = useRef(null);
+    const globalAudioCtxRef = useRef(null);
+    const globalGainNodeRef = useRef(null);
+    const globalSourceNodeRef = useRef(null);
+
+    // Initialize Global Audio
+    useEffect(() => {
+        const audio = new Audio('/alarm_loop.mp3');
+        audio.loop = true; // Make it play continuously
+        audio.crossOrigin = "anonymous";
+        globalAudioRef.current = audio;
+
+        return () => {
+            if (globalAudioRef.current) {
+                globalAudioRef.current.pause();
+                globalAudioRef.current = null;
+            }
+            if (globalAudioCtxRef.current) {
+                globalAudioCtxRef.current.close().catch(() => { });
+                globalAudioCtxRef.current = null;
+            }
+        };
+    }, []);
+
+    const playGlobalAlarm = useCallback(async (actionType = 'SYSTEM') => {
+        setGlobalAlarmSource(actionType);
+
+        // Vibrate continuously
+        if (navigator.vibrate) navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+
+        // Attempt Foreground Service Wakelock to keep webview active on newer Androids
+        if (Capacitor.getPlatform() === 'android') {
+            try {
+                KeepAwake.keepAwake();
+                await ForegroundService.startForegroundService({
+                    id: 999,
+                    title: "Alarm Active",
+                    body: "Tap to dismiss...",
+                    smallIcon: "ic_stat_icon_config_sample",
+                    serviceType: 1073741824, // SPECIAL_USE
+                    silent: true
+                });
+            } catch (e) { console.error("Global foreground start error", e); }
+        }
+
+        // Web Audio Route
+        if (globalAudioRef.current) {
+            try {
+                if (!globalAudioCtxRef.current) {
+                    const CtxClass = window.AudioContext || window.webkitAudioContext;
+                    globalAudioCtxRef.current = new CtxClass();
+                    globalGainNodeRef.current = globalAudioCtxRef.current.createGain();
+                    globalGainNodeRef.current.gain.value = 5.0; // Extremely loud
+                    globalGainNodeRef.current.connect(globalAudioCtxRef.current.destination);
+
+                    globalSourceNodeRef.current = globalAudioCtxRef.current.createMediaElementSource(globalAudioRef.current);
+                    globalSourceNodeRef.current.connect(globalGainNodeRef.current);
+                }
+
+                if (globalAudioCtxRef.current.state === 'suspended') {
+                    await globalAudioCtxRef.current.resume();
+                }
+
+                globalAudioRef.current.currentTime = 0;
+                await globalAudioRef.current.play();
+            } catch (e) {
+                console.error("Global Audio blocked", e);
+                globalAudioRef.current.play().catch(err => console.error(err));
+            }
+        }
+    }, []);
+
+    const stopGlobalAlarm = useCallback(() => {
+        if (globalAudioRef.current) {
+            globalAudioRef.current.pause();
+            globalAudioRef.current.currentTime = 0;
+        }
+        setGlobalAlarmSource(null);
+
+        if (Capacitor.getPlatform() === 'android') {
+            try {
+                ForegroundService.stopForegroundService();
+                KeepAwake.allowSleep();
+            } catch (e) { }
+        }
+    }, []);
+
     const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
@@ -268,7 +359,6 @@ function App() {
                 qualityChecks,
                 dayRating,
                 errors,
-                todos,
             });
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
@@ -314,12 +404,12 @@ function App() {
         } finally {
             setIsSaving(false);
         }
-    }, [date, subjects, checklistItems, qualityChecks, dayRating, errors, todos]);
+    }, [date, subjects, checklistItems, qualityChecks, dayRating, errors]);
 
     // Track unsaved changes
     useEffect(() => {
         setHasUnsavedChanges(true);
-    }, [subjects, checklistItems, qualityChecks, dayRating, errors, todos]);
+    }, [subjects, checklistItems, qualityChecks, dayRating, errors]);
 
     // Ref to track previous date for save-before-navigate
     const prevDateRef = useRef(date);
@@ -328,7 +418,6 @@ function App() {
     const qualityRef = useRef(qualityChecks);
     const dayRatingRef = useRef(dayRating);
     const errorsRef = useRef(errors);
-    const todosRef = useRef(todos);
     const hasUnsavedRef = useRef(hasUnsavedChanges);
 
     // Keep refs in sync
@@ -337,7 +426,6 @@ function App() {
     useEffect(() => { qualityRef.current = qualityChecks; }, [qualityChecks]);
     useEffect(() => { dayRatingRef.current = dayRating; }, [dayRating]);
     useEffect(() => { errorsRef.current = errors; }, [errors]);
-    useEffect(() => { todosRef.current = todos; }, [todos]);
     useEffect(() => { hasUnsavedRef.current = hasUnsavedChanges; }, [hasUnsavedChanges]);
 
     // Auto-save every 10 seconds if there are unsaved changes
@@ -351,25 +439,70 @@ function App() {
         return () => clearInterval(autoSaveInterval);
     }, [hasUnsavedChanges, isSaving, handleSave]);
 
+    // Load global todos on mount
+    useEffect(() => {
+        const loadGlobalTaskData = async () => {
+            try {
+                const globalTodos = await loadGlobalTodos();
+                if (globalTodos !== null) {
+                    setTodos(globalTodos);
+                }
+            } catch (error) {
+                console.error('Failed to load global todos:', error);
+            }
+        };
+        loadGlobalTaskData();
+    }, []);
+
+    // Auto-save global todos when they change
+    const isInitialMount = useRef(true);
+    useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
+        const saveTodos = async () => {
+            try {
+                await saveGlobalTodos(todos);
+            } catch (error) {
+                console.error('Failed to save global todos:', error);
+            }
+        };
+        saveTodos();
+    }, [todos]);
+
     // Initialize Notifications once on mount
     useEffect(() => {
         const initNotifications = async () => {
             await NotificationService.initialize();
 
             // Initialize notification actions listener
-            NotificationService.initListeners(({ originalId, actionId, actionType }) => {
-                if (actionId === 'mark-done' || actionType === 'TODO_ACTIONS') {
-                    // Handle ToDo
-                    setTodos(prevTodos => prevTodos.map(todo =>
-                        todo.id === originalId ? { ...todo, completed: true, reminder: false } : todo
-                    ));
-                } else if (actionId === 'dismiss' || actionType === 'ALARM_ACTIONS') {
-                    // Handle Subject/General Alarm
-                    setSubjects(prevSubjects => prevSubjects.map(subj =>
-                        subj.id === originalId ? { ...subj, reminder: false } : subj
-                    ));
+            NotificationService.initListeners(
+                ({ originalId, actionId, actionType }) => {
+                    // Stop audio ONLY IF the action is not from the FOCUS_ALARM.
+                    // The Focus alarm requires explicitly opening the Focus tab to kill it.
+                    if (actionType !== 'FOCUS_ALARM') {
+                        stopGlobalAlarm();
+                    }
+
+                    if (actionId === 'mark-done' || actionType === 'TODO_ACTIONS') {
+                        // Handle ToDo
+                        setTodos(prevTodos => prevTodos.map(todo =>
+                            todo.id === originalId ? { ...todo, completed: true, reminder: false } : todo
+                        ));
+                    } else if (actionId === 'dismiss' || actionType === 'ALARM_ACTIONS') {
+                        // Handle Subject/General Alarm
+                        setSubjects(prevSubjects => prevSubjects.map(subj =>
+                            subj.id === originalId ? { ...subj, reminder: false } : subj
+                        ));
+                    }
+                },
+                ({ originalId, actionType }) => {
+                    // Fire loud alarm sequence exactly when OS background push comes through
+                    playGlobalAlarm(actionType);
                 }
-            });
+            );
         };
 
         initNotifications();
@@ -389,7 +522,6 @@ function App() {
                         qualityChecks: qualityRef.current,
                         dayRating: dayRatingRef.current,
                         errors: errorsRef.current,
-                        todos: todosRef.current,
                     });
 
                     // Sync recurring subjects from old date
@@ -484,7 +616,6 @@ function App() {
                     setQualityChecks(data.qualityChecks || cloneDefaults(DEFAULT_QUALITY));
                     setDayRating(data.dayRating || '');
                     setErrors(data.errors || cloneDefaults(DEFAULT_ERRORS));
-                    setTodos(data.todos || cloneDefaults(DEFAULT_TODOS));
 
                     if (data.updatedAt) {
                         setLastSaved(data.updatedAt instanceof Date ? data.updatedAt : new Date(data.updatedAt));
@@ -537,7 +668,6 @@ function App() {
                     setQualityChecks(cloneDefaults(DEFAULT_QUALITY));
                     setDayRating('');
                     setErrors(cloneDefaults(DEFAULT_ERRORS));
-                    setTodos(cloneDefaults(DEFAULT_TODOS));
                     setLastSaved(null);
                 }
                 setHasUnsavedChanges(false);
@@ -625,7 +755,13 @@ function App() {
 
     return (
         <BrowserRouter>
-            <div className={containerClassName}>
+            <div
+                className={containerClassName}
+                style={{
+                    paddingTop: 'env(safe-area-inset-top)',
+                    paddingBottom: 'env(safe-area-inset-bottom)'
+                }}
+            >
                 <LiveBackground theme={theme} />
 
                 <input
@@ -659,6 +795,34 @@ function App() {
                 />
 
                 <div className={contentClassName}>
+                    {/* Global Alarm Overlay (Hidden for FOCUS_ALARM) */}
+                    <AnimatePresence>
+                        {globalAlarmSource && globalAlarmSource !== 'FOCUS_ALARM' && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-app-bg/95 backdrop-blur-md p-6"
+                            >
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
+                                    transition={{ repeat: Infinity, duration: 1.2 }}
+                                    className="text-app-accent-warning mb-6"
+                                >
+                                    <Timer size={64} />
+                                </motion.div>
+                                <h1 className="text-3xl font-bold text-app-text-main mb-2">Alarm!</h1>
+                                <p className="text-lg text-app-text-muted mb-8 text-center">Your scheduled task is ready.</p>
+                                <button
+                                    onClick={stopGlobalAlarm}
+                                    className="w-full max-w-sm py-4 px-8 rounded-2xl bg-app-accent-warning text-white font-bold tracking-wider text-xl shadow-2xl shadow-app-accent-warning/30 hover:bg-app-accent-warning/90 transition-all active:scale-95 flex items-center justify-center gap-3"
+                                >
+                                    <X size={28} strokeWidth={3} /> STOP ALARM
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <Layout>
                         <Header
                             theme={theme}
@@ -711,7 +875,12 @@ function App() {
                                     />
                                 } />
                                 <Route path="/todo" element={<TodoPage todos={todos} setTodos={setTodos} />} />
-                                <Route path="/focus" element={<FocusPage />} />
+                                <Route path="/focus" element={
+                                    <FocusPage
+                                        globalAlarmSource={globalAlarmSource}
+                                        stopGlobalAlarm={stopGlobalAlarm}
+                                    />
+                                } />
                             </Routes>
                         </motion.main>
                     </Layout>

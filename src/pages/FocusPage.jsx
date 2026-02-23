@@ -1,11 +1,22 @@
 import React from 'react';
 import CountdownTimer from '../components/CountdownTimer';
+import InbuiltAlarm from '../components/InbuiltAlarm';
 
-const FocusPage = () => {
+const FocusPage = ({ globalAlarmSource, stopGlobalAlarm }) => {
     return (
-        <div>
+        <div className="space-y-6 pb-20">
             <div className="w-full">
-                <CountdownTimer />
+                <CountdownTimer
+                    globalAlarmSource={globalAlarmSource}
+                    stopGlobalAlarm={stopGlobalAlarm}
+                />
+            </div>
+
+            <div className="w-full">
+                <InbuiltAlarm
+                    globalAlarmSource={globalAlarmSource}
+                    stopGlobalAlarm={stopGlobalAlarm}
+                />
             </div>
         </div>
     );

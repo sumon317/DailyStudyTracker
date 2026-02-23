@@ -14,6 +14,7 @@ const isNative = Capacitor.isNativePlatform();
 // Native file storage helper for Android
 const STORAGE_FILE = 'study-tracker-data.json';
 const RECURRING_KEY = '__recurring_subjects';
+const TODOS_KEY = '__global_todos';
 
 /**
  * Save recurring subject templates
@@ -77,6 +78,71 @@ export const loadRecurringSubjects = async () => {
     } catch (error) {
         const stored = localStorage.getItem(RECURRING_KEY);
         return stored ? JSON.parse(stored) : [];
+    }
+};
+
+/**
+ * Save global todos
+ * These persist across all days
+ */
+export const saveGlobalTodos = async (todos) => {
+    if (!isNative) {
+        // Web: use localStorage
+        localStorage.setItem(TODOS_KEY, JSON.stringify(todos));
+        return true;
+    }
+
+    try {
+        let allData = {};
+        try {
+            const existingFile = await Filesystem.readFile({
+                path: STORAGE_FILE,
+                directory: Directory.Data,
+                encoding: Encoding.UTF8,
+            });
+            allData = JSON.parse(existingFile.data);
+        } catch (e) {
+            allData = {};
+        }
+
+        allData[TODOS_KEY] = todos;
+
+        await Filesystem.writeFile({
+            path: STORAGE_FILE,
+            data: JSON.stringify(allData, null, 2),
+            directory: Directory.Data,
+            encoding: Encoding.UTF8,
+        });
+
+        console.log('[Native Storage] Saved global todos');
+        return true;
+    } catch (error) {
+        console.error('[Native Storage] Global todos save error:', error);
+        localStorage.setItem(TODOS_KEY, JSON.stringify(todos));
+        return true;
+    }
+};
+
+/**
+ * Load global todos
+ */
+export const loadGlobalTodos = async () => {
+    if (!isNative) {
+        const stored = localStorage.getItem(TODOS_KEY);
+        return stored ? JSON.parse(stored) : null;
+    }
+
+    try {
+        const existingFile = await Filesystem.readFile({
+            path: STORAGE_FILE,
+            directory: Directory.Data,
+            encoding: Encoding.UTF8,
+        });
+        const allData = JSON.parse(existingFile.data);
+        return allData[TODOS_KEY] || null;
+    } catch (error) {
+        const stored = localStorage.getItem(TODOS_KEY);
+        return stored ? JSON.parse(stored) : null;
     }
 };
 
