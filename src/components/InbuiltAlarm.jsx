@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, BellOff, X, Plus, Trash2, ChevronDown } from 'lucide-react';
 import TimePicker from './TimePicker';
-import { NotificationService } from '../utils/notificationService';
+import NativeAlarm from '../plugins/NativeAlarm';
+import { Capacitor } from '@capacitor/core';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }) => {
@@ -36,7 +37,9 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }) => {
     };
 
     const removeAlarm = async (id) => {
-        await NotificationService.cancelNotification(`focus_alarm_${id}`);
+        if (Capacitor.isNativePlatform()) {
+            await NativeAlarm.cancelAlarm({ id: parseInt(id) }).catch(console.error);
+        }
         setAlarms(alarms.filter(a => a.id !== id));
     };
 
@@ -45,7 +48,9 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }) => {
             if (a.id === id) {
                 // If active, we need to reschedule
                 if (a.active) {
-                    NotificationService.cancelNotification(`focus_alarm_${id}`);
+                    if (Capacitor.isNativePlatform()) {
+                        NativeAlarm.cancelAlarm({ id: parseInt(id) }).catch(console.error);
+                    }
                     // Setting it to inactive so user has to turn it back on with new time
                     return { ...a, time: newTime, active: false };
                 }
@@ -61,10 +66,10 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }) => {
 
         if (alarm.active) {
             // Turn off
-            const success = await NotificationService.cancelNotification(`focus_alarm_${id}`);
-            if (success) {
-                setAlarms(prev => prev.map(a => a.id === id ? { ...a, active: false } : a));
+            if (Capacitor.isNativePlatform()) {
+                await NativeAlarm.cancelAlarm({ id: parseInt(id) }).catch(console.error);
             }
+            setAlarms(prev => prev.map(a => a.id === id ? { ...a, active: false } : a));
         } else {
             // Turn on
             if (!alarm.time) {
@@ -76,19 +81,30 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }) => {
             const h = parseInt(hours, 10);
             const m = parseInt(minutes, 10);
 
-            const result = await NotificationService.scheduleDailyNotification(
-                `focus_alarm_${id}`,
-                'Focus Alarm',
-                'Your daily focus alarm is ringing! Open the app to stop it.',
-                h,
-                m,
-                'FOCUS_ALARM'
-            );
+            // Calculate exact next timestamp
+            const now = new Date();
+            const alarmTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
 
-            if (result.success) {
-                setAlarms(prev => prev.map(a => a.id === id ? { ...a, active: true } : a));
+            // If the time has already passed today, schedule for tomorrow
+            if (alarmTime.getTime() <= now.getTime()) {
+                alarmTime.setDate(alarmTime.getDate() + 1);
+            }
+
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    await NativeAlarm.scheduleAlarm({
+                        id: parseInt(id),
+                        time: alarmTime.getTime(),
+                        title: "Focus Alarm",
+                        body: "Your scheduled alarm is ringing!"
+                    });
+                    setAlarms(prev => prev.map(a => a.id === id ? { ...a, active: true } : a));
+                } catch (e) {
+                    console.error("Native Alarm scheduling failed", e);
+                    alert("Failed to schedule native alarm.");
+                }
             } else {
-                alert(`Failed to activate alarm: ${result.error}`);
+                setAlarms(prev => prev.map(a => a.id === id ? { ...a, active: true } : a));
             }
         }
     };
@@ -167,8 +183,8 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }) => {
                                                 <button
                                                     onClick={() => toggleAlarm(alarm.id)}
                                                     className={`p-2 rounded-full transition-all active:scale-95 ${alarm.active
-                                                            ? 'bg-app-accent-warning text-white shadow-lg shadow-app-accent-warning/20 hover:bg-app-accent-warning/90'
-                                                            : 'text-app-text-muted hover:bg-app-surface'
+                                                        ? 'bg-app-accent-warning text-white shadow-lg shadow-app-accent-warning/20 hover:bg-app-accent-warning/90'
+                                                        : 'text-app-text-muted hover:bg-app-surface'
                                                         }`}
                                                     title={alarm.active ? 'Turn Off' : 'Turn On'}
                                                 >

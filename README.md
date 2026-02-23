@@ -1,5 +1,7 @@
 # 📚 Daily Study Tracker
 
+> **Archived:** This was a vibe coded app and I do not want to develop it anymore. If anyone wants to use the code they can.
+
 A beautiful, feature-rich study tracking application built with React. Track your daily study progress, set goals, and stay motivated with stunning animated themes.
 
 ![Daily Study Tracker](https://img.shields.io/badge/React-18-blue) ![Capacitor](https://img.shields.io/badge/Capacitor-Android-green) ![License](https://img.shields.io/badge/License-MIT-yellow)

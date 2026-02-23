@@ -68,6 +68,15 @@
         <!-- Foreground Service Plugin -->
         <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
         <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="specialUse" />
+
+        <!-- 100% Reliable Native Alarm System -->
+        <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <activity 
+            android:name=".AlarmActivity"
+            android:showOnLockScreen="true"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:exported="false"
+            android:launchMode="singleTask" />
     </application>
 
     <!-- Permissions -->
@@ -80,4 +89,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 </manifest>

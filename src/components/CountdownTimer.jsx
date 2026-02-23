@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { Timer, Play, Pause, RotateCcw, X, Check, ChevronDown, Plus } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, X, Check, ChevronDown, Plus, RefreshCw, Hand, Settings, Volume2, Save, Trash2, Edit2, VolumeX, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { KeepAwake } from '@capacitor-community/keep-awake';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import NativeAlarm from '../plugins/NativeAlarm';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 
 const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }) => {
@@ -215,19 +214,26 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }) => {
             // This ensures it fires even if JS is throttled in the background
             if (Capacitor.isNativePlatform()) {
                 try {
+                    await NativeAlarm.scheduleAlarm({
+                        id: 101, // Unique ID for Focus Timer
+                        time: new Date(end).getTime(),
+                        title: "Focus Time Complete!",
+                        body: "Your study session has finished. Take a break!"
+                    });
+                } catch (e) {
+                    console.error("NativeAlarm failed, falling back to LocalNotifications...", e);
+                    // Fallback to local notifications just in case there's an issue with the native plugin
                     await LocalNotifications.schedule({
                         notifications: [{
                             title: "Time's Up!",
                             body: "Your focus session is complete.",
-                            id: 101, // Unique ID for Focus Timer
+                            id: 101,
                             schedule: { at: new Date(end), allowWhileIdle: true },
                             smallIcon: 'ic_timer_icon',
                             channelId: 'study-alarms-v3',
-                            actionTypeId: 'FOCUS_ALARM', // No global stop button
-                            extra: { originalId: 'focus_timer_end' }
                         }]
                     });
-                } catch (e) { console.error("Scheduling upfront notification failed", e); }
+                }
             }
         } else if (isActive) {
             const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
@@ -237,6 +243,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }) => {
 
             // Cancel any pending notification
             if (Capacitor.isNativePlatform()) {
+                NativeAlarm.cancelAlarm({ id: 101 }).catch(() => { });
                 LocalNotifications.cancel({ notifications: [{ id: 101 }] }).catch(() => { });
             }
         }
@@ -250,6 +257,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }) => {
 
         // Cancel any pending notification
         if (Capacitor.isNativePlatform()) {
+            NativeAlarm.cancelAlarm({ id: 101 }).catch(() => { });
             LocalNotifications.cancel({ notifications: [{ id: 101 }] }).catch(() => { });
         }
     }, [initialTime, stopAlarm]);
