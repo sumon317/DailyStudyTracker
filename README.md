@@ -1,10 +1,8 @@
 # 📚 Daily Study Tracker
 
-> **Archived:** This was a vibe coded app and I do not want to develop it anymore. If anyone wants to use the code they can.
+A beautiful, feature-rich study tracking application built with React and TypeScript. Track your daily study progress, set goals, and stay motivated with Material Design 3 themes.
 
-A beautiful, feature-rich study tracking application built with React. Track your daily study progress, set goals, and stay motivated with stunning animated themes.
-
-![Daily Study Tracker](https://img.shields.io/badge/React-18-blue) ![Capacitor](https://img.shields.io/badge/Capacitor-Android-green) ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Daily Study Tracker](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue) ![Capacitor](https://img.shields.io/badge/Capacitor-Android-green) ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ### 🌐 Live Demo
 The app is fully functional and live on the web at: **[dailystudytracker.onrender.com](https://dailystudytracker.onrender.com)**
@@ -12,7 +10,7 @@ The app is fully functional and live on the web at: **[dailystudytracker.onrende
 ## ✨ Features
 
 ### 📊 Study Tracking
-- **6-Hour Daily Target** - Track study time across multiple subjects
+- **Daily Target** - Track study time across multiple subjects
 - **Subject Management** - Add or remove subjects dynamically
 - **KPI Tracking** - Mark subjects as completed (Y/N)
 - **Smart Day Rating** - Automatic rating based on your progress
@@ -42,22 +40,21 @@ The app is fully functional and live on the web at: **[dailystudytracker.onrende
 - **Widget Actions** - Play/Pause timer directly from home screen
 - **Theme Toggle** - Switch between Dark and Light modes
 - **Real-time Sync** - Updates instantly when app data changes
-> **Note:** The persistent stopwatch notification is exclusively for the Widget timer.
 
-### 🎨 Beautiful Themes (In-App)
+### 🎨 Material Design 3 Themes
 | Theme | Description |
 |-------|-------------|
-| ☀️ Light | Warm cream tones with indigo accents |
-| 🌙 Dark | Classic dark mode with indigo highlights |
-| 🌿 Material Day | Fresh teal/mint aesthetic |
-| 💜 Material Night | Modern purple/violet design |
-| 🌸 Cherry Blossom | Animated falling petals (Default) |
-| 🎋 Bamboo Forest | Peaceful green with floating leaves |
-| 🌊 Ocean Depths | Underwater world with fish & bubbles |
+| ☀️ Light | Clean light theme |
+| 🌙 Dark | Easy on the eyes |
+| 🔄 Auto | Follows system preference |
+| 🌿 Material | Material You light |
+| 💜 Material Dark | Material You dark |
+| 💧 Adaptive | Pick any color from your screen |
 
 ### 📱 Cross-Platform
 - **Web Browser** - Works on any modern browser
 - **Android App** - Native APK with Capacitor
+- **PWA** - Installable on any device with offline support
 - **Persistent Storage** - Data saved locally on device
 - **Auto-Save** - Automatically saves progress every 10 seconds
 
@@ -69,8 +66,8 @@ The app is fully functional and live on the web at: **[dailystudytracker.onrende
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- npm or yarn
+- Node.js 20+
+- npm
 
 ### Installation
 
@@ -106,11 +103,14 @@ npx cap open android
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, Tailwind CSS
+- **Frontend**: React 18, TypeScript (strict mode)
+- **Styling**: Tailwind CSS, Material Design 3
 - **Animations**: Framer Motion, CSS Animations
 - **Storage**: Dexie.js (IndexedDB), Capacitor Filesystem
-- **Mobile**: Capacitor (Android)
+- **Mobile**: Capacitor 8 (Android)
 - **Build**: Vite
+- **Linting**: Biome
+- **Testing**: Vitest + Testing Library
 - **Icons**: Lucide React
 
 ## 📁 Project Structure
@@ -118,26 +118,19 @@ npx cap open android
 ```
 DailyStudyTracker/
 ├── src/
-│   ├── components/     # React components (Charts, Stats, Tracker, etc.)
-│   ├── utils/          # PDF & Markdown generators
-│   ├── db.js           # Database & storage logic
-│   ├── App.jsx         # Main application
-│   └── index.css       # Theme styles
+│   ├── components/     # React components
+│   ├── pages/          # Route components (lazy-loaded)
+│   ├── providers/      # Context providers (Theme, Data, Toast)
+│   ├── types/          # TypeScript type definitions
+│   ├── utils/          # Utilities (PDF, MD, notifications, sanitize)
+│   ├── plugins/        # Capacitor native plugins
+│   ├── db.ts           # Database & storage logic
+│   ├── App.tsx         # Main application
+│   └── main.tsx        # Entry point
 ├── android/            # Capacitor Android project
-├── public/             # Static assets
+├── public/             # Static assets (PWA manifest, service worker)
 └── dist/               # Production build
 ```
-
-## 📸 Screenshots
-
-<p float="left">
-  <img src="screenshots/Screenshot_2026-02-14-16-03-08-55_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
-  <img src="screenshots/Screenshot_2026-02-14-16-03-12-06_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
-  <img src="screenshots/Screenshot_2026-02-14-16-03-14-75_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
-  <img src="screenshots/Screenshot_2026-02-14-16-03-17-01_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" /> 
-  <img src="screenshots/Screenshot_2026-02-14-16-03-19-71_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
-  <img src="screenshots/Screenshot_2026-02-14-16-05-07-36_a42d1eb7781139db4230b02d2a615f11.jpg" width="200" />
-</p>
 
 ## 🤝 Contributing
 
