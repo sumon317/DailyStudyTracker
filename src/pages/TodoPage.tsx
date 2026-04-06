@@ -94,7 +94,7 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
             ).then((result) => {
                 if (result.success) {
                     setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, reminder: true } : t)));
-                    alert(`Reminder scheduled to repeat daily at ${todo.time}.`);
+                    alert(`Reminder set! You will be notified daily at ${todo.time}.`);
                 } else {
                     alert(`Failed to schedule notification: ${result.error || 'Unknown error'}`);
                 }

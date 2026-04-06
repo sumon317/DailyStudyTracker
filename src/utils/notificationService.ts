@@ -189,6 +189,14 @@ export const NotificationService = {
                 }
             }
 
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(hour, minute, 0, 0);
+
+            if (tomorrow.getTime() < Date.now()) {
+                tomorrow.setDate(tomorrow.getDate() + 1);
+            }
+
             await LocalNotifications.schedule({
                 notifications: [
                     {
@@ -196,14 +204,12 @@ export const NotificationService = {
                         body,
                         id,
                         schedule: {
-                            on: { hour, minute },
-                            allowWhileIdle: true,
+                            at: tomorrow,
                             repeats: true,
                         },
                         smallIcon: 'ic_stat_icon_config_sample',
                         channelId: 'study-alarms-v3',
                         actionTypeId: actionType,
-                        ongoing: true,
                         autoCancel: true,
                         extra: { originalId },
                     },
