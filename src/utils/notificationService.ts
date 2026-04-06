@@ -179,7 +179,7 @@ export const NotificationService = {
         actionType = 'TODO_ACTIONS',
     ): Promise<NotificationScheduleResult> {
         if (!Capacitor.isNativePlatform()) {
-            return { success: false, error: 'Notifications not supported on web' };
+            return this.scheduleWebNotification(originalId, title, body, hour, minute);
         }
 
         try {
@@ -257,6 +257,42 @@ export const NotificationService = {
         } catch (_error) {
             return [];
         }
+    },
+
+    async scheduleWebNotification(
+        originalId: string | number,
+        title: string,
+        body: string,
+        hour: number,
+        minute: number,
+    ): Promise<NotificationScheduleResult> {
+        if (!('Notification' in window)) {
+            return { success: false, error: 'Web Notifications not supported' };
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            return { success: false, error: 'Notification permission denied' };
+        }
+
+        const now = new Date();
+        const targetTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+
+        if (targetTime.getTime() <= now.getTime()) {
+            targetTime.setDate(targetTime.getDate() + 1);
+        }
+
+        const delay = targetTime.getTime() - now.getTime();
+
+        setTimeout(() => {
+            new Notification(title, {
+                body,
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+            });
+        }, delay);
+
+        return { success: true };
     },
 };
 
