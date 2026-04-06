@@ -260,7 +260,7 @@ export const NotificationService = {
     },
 
     async scheduleWebNotification(
-        originalId: string | number,
+        _originalId: string | number,
         title: string,
         body: string,
         hour: number,
