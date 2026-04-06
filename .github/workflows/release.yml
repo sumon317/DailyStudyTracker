@@ -117,32 +117,32 @@ jobs:
           ## What's New in v${{ env.VERSION }}
 
           ### 🐛 Bug Fixes
+          - Fixed Todo alarm firing immediately instead of at scheduled time
+          - Fixed TodoPage setTodos using stale closures
           - Fixed exportData returning meaningless count
           - Fixed ErrorLog removeError using wrong filter (index vs id)
           - Fixed CountdownTimer useEffect re-running every second
           - Fixed TrackerForm day indicators (Mon=1, not Mon=0)
           - Fixed StudyCharts using subject.name as key (duplicates)
-          - Fixed TodoPage setTodos using stale closures
           - Fixed App.tsx update check running on every date change
           - Fixed DataProvider generateId collisions across tabs
 
           ### ✨ Features
+          - Web Notifications support for todo reminders (uses browser Notification API)
           - Auto-update system with modal popup and progress bar
           - "Check Updates" button in header menu
           - Widget auto-updates every 10 seconds on data save
-          - Widget timer controls work across all instances
 
           ### 🎨 Improvements
           - Reduced audio file size (5.9MB → 1.4MB)
           - Compressed PNG assets (~2MB → 36KB)
           - Added ProGuard rules for release builds
           - Added reduced-motion support for accessibility
-          - Improved type safety with memoized setters
           - Optimized build with code splitting and terser minification
 
           ### 🧪 Testing
           - Added 34 new unit tests for utils
-          - Total tests: 90 (up from 56)
+          - Total tests: 90+
 
           ### 📦 Build
           - Bundle size: ~2.9MB (gzipped)
