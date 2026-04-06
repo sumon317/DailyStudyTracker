@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Download, FileText, MoreVertical, Save, Timer, Upload, X } from 'lucide-react';
+import { Download, FileText, MoreVertical, RefreshCw, Save, Timer, Upload, X } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
@@ -12,12 +12,13 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import { SkeletonCard } from './components/SkeletonLoader';
 import ThemeSelector from './components/ThemeSelector';
+import UpdateModal from './components/UpdateModal';
 import { useData } from './providers/DataProvider';
 import { useTheme } from './providers/ThemeProvider';
 import { useToast } from './providers/ToastProvider';
-import type { HeaderProps } from './types';
+import type { HeaderProps, UpdateResult } from './types';
+import { checkForUpdate } from './utils/checkForUpdate';
 import { NotificationService } from './utils/notificationService';
-import { updateWidget } from './utils/widgetBridge';
 
 const TrackerPage = lazy(() => import('./pages/TrackerPage'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
@@ -38,6 +39,8 @@ const Header = memo(
         onDownloadMD,
         onExport,
         onImportClick,
+        onCheckForUpdates,
+        isCheckingUpdate,
     }: HeaderProps) => {
         const { date, setDate, subjects } = useData();
         const { theme, setTheme } = useTheme();
@@ -72,7 +75,8 @@ const Header = memo(
                         </h1>
                         <div className="flex items-center gap-2 text-app-text-muted text-sm">
                             <span>
-                                Target: {subjects.reduce((acc, s) => acc + (parseInt(s.planned, 10) || 0), 0) / 60}h
+                                Target:{' '}
+                                {subjects.reduce((acc, s) => acc + (Number.parseInt(s.planned, 10) || 0), 0) / 60}h
                             </span>
                             <span>•</span>
                             <button
@@ -222,6 +226,32 @@ const Header = memo(
                                         >
                                             <FileText size={16} className="text-app-primary" /> Export MD
                                         </button>
+                                        {onCheckForUpdates && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    onCheckForUpdates();
+                                                    setMenuOpen(false);
+                                                }}
+                                                disabled={isCheckingUpdate}
+                                                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-app-text-main hover:bg-app-bg transition-colors border-t border-app-border disabled:opacity-50"
+                                            >
+                                                {isCheckingUpdate ? (
+                                                    <>
+                                                        <RefreshCw
+                                                            size={16}
+                                                            className="animate-spin text-app-primary"
+                                                        />{' '}
+                                                        Checking...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <RefreshCw size={16} className="text-app-primary" /> Check
+                                                        Updates
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -269,9 +299,12 @@ function App() {
     const globalGainNodeRef = useRef<GainNode | null>(null);
     const globalSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
     const [showAlarmPermissionModal, setShowAlarmPermissionModal] = useState(false);
+    const [updateInfo, setUpdateInfo] = useState<UpdateResult | null>(null);
+    const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const [checkingUpdate, setCheckingUpdate] = useState(false);
 
     useEffect(() => {
-        const audio = new Audio('/alarm_loop.mp3');
+        const audio = new Audio('/alarm_loop_small.mp3');
         audio.loop = true;
         audio.crossOrigin = 'anonymous';
         globalAudioRef.current = audio;
@@ -293,7 +326,9 @@ function App() {
     const playGlobalAlarm = useCallback(async (actionType = 'SYSTEM') => {
         setGlobalAlarmSource(actionType);
 
-        if (navigator.vibrate) navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+        if (navigator.vibrate) {
+            navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+        }
 
         if (Capacitor.getPlatform() === 'android') {
             try {
@@ -387,15 +422,44 @@ function App() {
     }, [playGlobalAlarm, stopGlobalAlarm, setTodos]);
 
     useEffect(() => {
-        loadDataForDate(date);
+        const checkForUpdates = async () => {
+            const ignoredVersion = localStorage.getItem('ignoredUpdateVersion');
+            const info = await checkForUpdate();
+            if (info?.available && info.tag !== ignoredVersion) {
+                setUpdateInfo(info);
+                setShowUpdateModal(true);
+            }
+        };
+        checkForUpdates();
+    }, []);
 
-        import('./utils/checkForUpdate').then(({ checkForUpdate }) => {
-            checkForUpdate().then((info) => {
-                if (info?.available) {
-                    showToast({ type: 'info', message: `Update available: ${info.tag ?? ''}` });
-                }
-            });
-        });
+    const handleCheckForUpdates = useCallback(async () => {
+        setCheckingUpdate(true);
+        const ignoredVersion = localStorage.getItem('ignoredUpdateVersion');
+        const info = await checkForUpdate(true);
+        if (info?.available && info.tag !== ignoredVersion) {
+            setUpdateInfo(info);
+            setShowUpdateModal(true);
+            showToast({ type: 'success', message: `Update found: ${info.tag}` });
+        } else {
+            showToast({ type: 'info', message: 'You are on the latest version' });
+        }
+        setCheckingUpdate(false);
+    }, [showToast]);
+
+    const handleRemindLater = useCallback(() => {
+        if (updateInfo?.tag) {
+            localStorage.setItem('ignoredUpdateVersion', updateInfo.tag);
+        }
+        setShowUpdateModal(false);
+    }, [updateInfo]);
+
+    const handleCloseUpdateModal = useCallback(() => {
+        setShowUpdateModal(false);
+    }, []);
+
+    useEffect(() => {
+        loadDataForDate(date);
 
         NotificationService.checkExactAlarmPermission().then((hasPermission) => {
             if (!hasPermission) {
@@ -405,17 +469,16 @@ function App() {
                 }
             }
         });
-    }, [date, loadDataForDate, showToast]);
+    }, [date, loadDataForDate]);
 
     const handleSave = useCallback(async () => {
         try {
             await saveData();
-            updateWidget(subjects);
             showToast({ type: 'success', message: 'Progress saved!' });
         } catch {
             showToast({ type: 'error', message: 'Failed to save progress.' });
         }
-    }, [saveData, subjects, showToast]);
+    }, [saveData, showToast]);
 
     const handleDownloadPDF = useCallback(() => {
         downloadPDF();
@@ -443,7 +506,9 @@ function App() {
     const handleImportFile = useCallback(
         async (event: ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
-            if (!file) return;
+            if (!file) {
+                return;
+            }
 
             try {
                 await importData(file);
@@ -494,7 +559,7 @@ function App() {
                         >
                             <motion.div
                                 animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
-                                transition={{ repeat: Infinity, duration: 1.2 }}
+                                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.2 }}
                                 className="text-app-accent-warning mb-6"
                             >
                                 <Timer size={64} />
@@ -524,6 +589,8 @@ function App() {
                         onDownloadMD={handleDownloadMD}
                         onExport={handleExport}
                         onImportClick={handleImportClick}
+                        onCheckForUpdates={handleCheckForUpdates}
+                        isCheckingUpdate={checkingUpdate}
                     />
 
                     <motion.main
@@ -634,6 +701,15 @@ function App() {
                         </Routes>
                     </motion.main>
                 </Layout>
+
+                <UpdateModal
+                    isOpen={showUpdateModal}
+                    onClose={handleCloseUpdateModal}
+                    version={updateInfo?.tag ?? ''}
+                    url={updateInfo?.url ?? ''}
+                    notes={updateInfo?.notes ?? ''}
+                    onRemindLater={handleRemindLater}
+                />
             </div>
         </div>
     );

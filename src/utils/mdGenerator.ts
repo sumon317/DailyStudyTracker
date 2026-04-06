@@ -27,8 +27,8 @@ export const generateMarkdown = async (data: ExportData) => {
 
     subjects.forEach((subject) => {
         md += `| ${sanitizeText(subject.name)} | ${subject.planned || '0'} | ${subject.actual || '0'} | ${sanitizeText(subject.kpi)} |\n`;
-        totalPlanned += parseFloat(subject.planned) || 0;
-        totalActual += parseFloat(subject.actual) || 0;
+        totalPlanned += Number.parseFloat(subject.planned) || 0;
+        totalActual += Number.parseFloat(subject.actual) || 0;
     });
 
     md += `| **Total** | **${totalPlanned}** | **${totalActual}** | |\n\n`;

@@ -37,8 +37,8 @@ export const generatePDF = async (data: ExportData) => {
         sanitizeText(s.kpi),
     ]);
 
-    const totalPlanned = subjects.reduce((acc, curr) => acc + (parseFloat(curr.planned) || 0), 0);
-    const totalActual = subjects.reduce((acc, curr) => acc + (parseFloat(curr.actual) || 0), 0);
+    const totalPlanned = subjects.reduce((acc, curr) => acc + (Number.parseFloat(curr.planned) || 0), 0);
+    const totalActual = subjects.reduce((acc, curr) => acc + (Number.parseFloat(curr.actual) || 0), 0);
     tableBody.push(['Total', String(totalPlanned), String(totalActual), '']);
 
     const autoTable = (doc as unknown as Record<string, ((opts: Record<string, unknown>) => void) | undefined>)
@@ -118,7 +118,7 @@ export const generatePDF = async (data: ExportData) => {
     const errorHead = [['Question', 'Mistake', 'Correct Logic']];
     const errorBody = errors
         .filter((e) => e.question || e.mistake || e.correctLogic)
-        .map((e) => [e.question, e.mistake, e.correctLogic]);
+        .map((e) => [sanitizeText(e.question), sanitizeText(e.mistake), sanitizeText(e.correctLogic)]);
 
     if (errorBody.length === 0) {
         errorBody.push(['', '', ''], ['', '', ''], ['', '', '']);

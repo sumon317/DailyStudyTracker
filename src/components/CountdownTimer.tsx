@@ -21,6 +21,8 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
 
     const intervalRef = useRef<number | null>(null);
     const endTimeRef = useRef<number | null>(null);
+    const timeLeftRef = useRef(timeLeft);
+    timeLeftRef.current = timeLeft;
 
     const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -29,7 +31,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
     const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
 
     useEffect(() => {
-        const audio = new Audio('/alarm_loop.mp3');
+        const audio = new Audio('/alarm_loop_small.mp3');
         audio.loop = true;
         audio.crossOrigin = 'anonymous';
         audioRef.current = audio;
@@ -55,7 +57,9 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
     const playAlarm = useCallback(async () => {
         setIsAlarmPlaying(true);
 
-        if (navigator.vibrate) navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+        if (navigator.vibrate) {
+            navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+        }
 
         if (audioRef.current) {
             try {
@@ -65,7 +69,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                         (window as unknown as Record<string, typeof AudioContext>).webkitAudioContext;
                     audioCtxRef.current = new CtxClass();
                     gainNodeRef.current = audioCtxRef.current.createGain();
-                    gainNodeRef.current.gain.value = 5.0;
+                    gainNodeRef.current.gain.value = 1.5;
                     gainNodeRef.current.connect(audioCtxRef.current.destination);
 
                     sourceNodeRef.current = audioCtxRef.current.createMediaElementSource(audioRef.current);
@@ -103,6 +107,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }, []);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const manageServices = async () => {
             if (isActive) {
@@ -152,7 +157,9 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
 
         if (isActive && timeLeft > 0) {
             intervalRef.current = window.setInterval(() => {
-                if (!endTimeRef.current) return;
+                if (!endTimeRef.current) {
+                    return;
+                }
 
                 const now = Date.now();
                 const remaining = Math.max(0, Math.ceil((endTimeRef.current - now) / 1000));
@@ -160,7 +167,9 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                 setTimeLeft(remaining);
 
                 if (remaining <= 0) {
-                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    if (intervalRef.current) {
+                        clearInterval(intervalRef.current);
+                    }
                     setIsActive(false);
                     playAlarm();
                 } else {
@@ -182,10 +191,12 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
         }
 
         return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
             KeepAwake.allowSleep();
         };
-    }, [isActive, playAlarm, timeLeft, formatTimeDisplay]);
+    }, [isActive, playAlarm, formatTimeDisplay, timeLeft]);
 
     const stopAlarm = useCallback(() => {
         if (audioRef.current) {
@@ -296,7 +307,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
 
     const handleInputChange =
         (setter: React.Dispatch<React.SetStateAction<number>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
-            const val = parseInt(e.target.value, 10) || 0;
+            const val = Number.parseInt(e.target.value, 10) || 0;
             setter(Math.max(0, val));
         };
 
@@ -349,7 +360,7 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                     >
                                         <motion.div
                                             animate={{ scale: [1, 1.1, 1] }}
-                                            transition={{ repeat: Infinity, duration: 1.5 }}
+                                            transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5 }}
                                             className="text-app-accent-warning mb-4"
                                         >
                                             <Timer size={48} />
@@ -359,7 +370,9 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                             type="button"
                                             onClick={() => {
                                                 stopAlarm();
-                                                if (stopGlobalAlarm) stopGlobalAlarm();
+                                                if (stopGlobalAlarm) {
+                                                    stopGlobalAlarm();
+                                                }
                                             }}
                                             className="w-full py-3 px-6 rounded-xl bg-app-accent-warning text-white font-bold text-lg shadow-lg shadow-app-accent-warning/20 hover:bg-app-accent-warning/90 transition-all active:scale-95 flex items-center justify-center gap-2"
                                         >

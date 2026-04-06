@@ -84,7 +84,9 @@ describe('Daily Study Tracker App', () => {
         render(<App />, { wrapper: TestWrapper });
         const inputs = await screen.findAllByPlaceholderText('0');
         const actualInput = inputs[0];
-        if (!actualInput) return;
+        if (!actualInput) {
+            return;
+        }
         fireEvent.change(actualInput, { target: { value: '45' } });
         expect((actualInput as HTMLInputElement).value).toBe('45');
     });

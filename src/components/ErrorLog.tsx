@@ -81,15 +81,15 @@ const ErrorLog = memo(({ errors, setErrors }: ErrorLogProps) => {
     }, [setErrors]);
 
     const removeError = useCallback(
-        (index: number) => {
-            setErrors((prev) => prev.filter((_, i) => i !== index));
+        (id: number) => {
+            setErrors((prev) => prev.filter((err) => err.id !== id));
         },
         [setErrors],
     );
 
     const updateError = useCallback(
-        (index: number, field: keyof ErrorLogEntry, value: string) => {
-            setErrors((prev) => prev.map((err, i) => (i === index ? { ...err, [field]: value } : err)));
+        (id: number, field: keyof ErrorLogEntry, value: string) => {
+            setErrors((prev) => prev.map((err) => (err.id === id ? { ...err, [field]: value } : err)));
         },
         [setErrors],
     );
@@ -111,13 +111,13 @@ const ErrorLog = memo(({ errors, setErrors }: ErrorLogProps) => {
             </div>
 
             <div className="space-y-3 sm:space-y-4">
-                {errors.map((error, index) => (
+                {errors.map((error) => (
                     <ErrorLogItem
                         key={error.id}
                         error={error}
-                        index={index}
-                        onUpdate={(field, value) => updateError(index, field, value)}
-                        onRemove={() => removeError(index)}
+                        index={error.id}
+                        onUpdate={(field, value) => updateError(error.id, field, value)}
+                        onRemove={() => removeError(error.id)}
                     />
                 ))}
 

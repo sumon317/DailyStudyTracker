@@ -49,6 +49,7 @@ const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#14b8a6', '#22c55e'
 
 interface SubjectStat {
     name: string;
+    id: number;
     actual: number;
     planned: number;
     percentage: number;
@@ -62,17 +63,18 @@ const StudyCharts = memo(({ subjects }: StudyChartsProps) => {
     const toggleOpen = useCallback(() => setIsOpen((prev) => !prev), []);
 
     const stats = useMemo(() => {
-        const totalPlanned = subjects.reduce((sum, s) => sum + (parseFloat(s.planned) || 0), 0);
-        const totalActual = subjects.reduce((sum, s) => sum + (parseFloat(s.actual) || 0), 0);
+        const totalPlanned = subjects.reduce((sum, s) => sum + (Number.parseFloat(s.planned) || 0), 0);
+        const totalActual = subjects.reduce((sum, s) => sum + (Number.parseFloat(s.actual) || 0), 0);
         const completionRate = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
         const kpiMet = subjects.filter((s) => s.kpi === 'Y').length;
 
         const subjectStats = subjects
             .map((s, i) => {
-                const actual = parseFloat(s.actual) || 0;
-                const planned = parseFloat(s.planned) || 0;
+                const actual = Number.parseFloat(s.actual) || 0;
+                const planned = Number.parseFloat(s.planned) || 0;
                 return {
                     name: s.name,
+                    id: s.id,
                     actual,
                     planned,
                     percentage: totalActual > 0 ? (actual / totalActual) * 100 : 0,
@@ -195,10 +197,10 @@ const StudyCharts = memo(({ subjects }: StudyChartsProps) => {
                                 <div className="space-y-3">
                                     {subjects.map((subject, i) => (
                                         <SubjectProgressBar
-                                            key={subject.name}
+                                            key={subject.id}
                                             name={subject.name}
-                                            planned={parseFloat(subject.planned) || 0}
-                                            actual={parseFloat(subject.actual) || 0}
+                                            planned={Number.parseFloat(subject.planned) || 0}
+                                            actual={Number.parseFloat(subject.actual) || 0}
                                             color={COLORS[i % COLORS.length] ?? '#6366f1'}
                                         />
                                     ))}
@@ -209,7 +211,7 @@ const StudyCharts = memo(({ subjects }: StudyChartsProps) => {
                             {stats.subjectStats.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {stats.subjectStats.map((s) => (
-                                        <div key={s.name} className="flex items-center gap-1 text-xs">
+                                        <div key={s.id} className="flex items-center gap-1 text-xs">
                                             <div
                                                 className="w-2 h-2 rounded-full"
                                                 style={{ backgroundColor: s.color }}

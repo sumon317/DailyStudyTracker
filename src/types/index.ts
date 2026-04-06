@@ -141,7 +141,7 @@ export interface DataProviderValue {
     setErrors: DataValueSetter<ErrorLogEntry[]>;
     setTodos: DataValueSetter<Todo[]>;
     saveData: () => Promise<void>;
-    exportData: () => number;
+    exportData: () => Promise<number>;
     importData: (file: File) => Promise<void>;
     downloadPDF: () => void;
     downloadMD: () => void;
@@ -326,6 +326,8 @@ export interface HeaderProps {
     onDownloadMD: () => void;
     onExport: () => void;
     onImportClick: () => void;
+    onCheckForUpdates?: () => void;
+    isCheckingUpdate?: boolean;
 }
 
 // ---------------------------------------------------------------------------

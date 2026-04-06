@@ -18,18 +18,58 @@
             "correctness": {
                 "noUnusedVariables": "error",
                 "noUnusedImports": "error",
-                "useExhaustiveDependencies": "error"
+                "useExhaustiveDependencies": "error",
+                "noUnusedPrivateClassMembers": "error",
+                "noUnreachable": "error"
             },
             "suspicious": {
                 "noEmptyBlockStatements": "error",
-                "noConsole": "warn"
+                "noConsole": "warn",
+                "noExplicitAny": "warn",
+                "noDuplicateCase": "error",
+                "noDuplicateClassMembers": "error",
+                "noDuplicateObjectKeys": "error",
+                "noDuplicateParameters": "error",
+                "noRedeclare": "error",
+                "noUnsafeNegation": "error"
             },
             "style": {
                 "useConst": "error",
-                "noNonNullAssertion": "warn"
+                "noNonNullAssertion": "warn",
+                "noInferrableTypes": "error",
+                "useBlockStatements": "error",
+                "useForOf": "error",
+                "useNumberNamespace": "error"
             },
             "complexity": {
-                "noUselessCatch": "error"
+                "noUselessCatch": "error",
+                "noUselessConstructor": "error",
+                "noUselessFragments": "error",
+                "noUselessTypeConstraint": "error",
+                "useArrowFunction": "error"
+            },
+            "security": {
+                "noDangerouslySetInnerHtml": "error"
+            },
+            "performance": {
+                "noDelete": "error",
+                "noAccumulatingSpread": "error"
+            },
+            "a11y": {
+                "noAriaUnsupportedElements": "error",
+                "noAutofocus": "error",
+                "noPositiveTabindex": "error",
+                "useAltText": "error",
+                "useAnchorContent": "error",
+                "useAriaPropsForRole": "error",
+                "useButtonType": "error",
+                "useHtmlLang": "error",
+                "useIframeTitle": "error",
+                "useKeyWithClickEvents": "error",
+                "useKeyWithMouseEvents": "error",
+                "useMediaCaption": "error",
+                "useValidAnchor": "error",
+                "useValidLang": "error"
             }
         }
     },

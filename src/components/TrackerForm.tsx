@@ -39,7 +39,9 @@ const RecurringModal = ({
         onSave(selectedDays);
     };
 
-    if (!isOpen) return null;
+    if (!isOpen) {
+        return null;
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -132,7 +134,11 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
 
     const handleChange = useCallback(
         (index: number, field: string, value: string | boolean) => {
-            if ((field === 'planned' || field === 'actual') && typeof value === 'string' && parseFloat(value) < 0) {
+            if (
+                (field === 'planned' || field === 'actual') &&
+                typeof value === 'string' &&
+                Number.parseFloat(value) < 0
+            ) {
                 return;
             }
 
@@ -142,8 +148,12 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
                         const updatedSubj: Subject = { ...subj, [field]: value };
 
                         if (field === 'actual' || field === 'planned') {
-                            const planned = parseFloat(field === 'planned' ? (value as string) : updatedSubj.planned);
-                            const actual = parseFloat(field === 'actual' ? (value as string) : updatedSubj.actual);
+                            const planned = Number.parseFloat(
+                                field === 'planned' ? (value as string) : updatedSubj.planned,
+                            );
+                            const actual = Number.parseFloat(
+                                field === 'actual' ? (value as string) : updatedSubj.actual,
+                            );
 
                             if (!Number.isNaN(planned) && !Number.isNaN(actual) && planned > 0) {
                                 updatedSubj.kpi = actual >= 0.8 * planned ? 'Y' : 'N';
@@ -179,10 +189,14 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
 
     const removeSubject = useCallback(
         async (index: number) => {
-            if (subjects.length <= 1) return;
+            if (subjects.length <= 1) {
+                return;
+            }
 
             const subject = subjects[index];
-            if (!subject) return;
+            if (!subject) {
+                return;
+            }
             if (subject.reminder && subject.id) {
                 await NotificationService.cancelNotification(subject.id);
             }
@@ -195,7 +209,9 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
     const handleReminder = useCallback(
         async (index: number) => {
             const subject = subjects[index];
-            if (!subject) return;
+            if (!subject) {
+                return;
+            }
 
             if (!subject.id) {
                 alert('Please reset your subjects to enable reminders (missing ID).');
@@ -214,8 +230,8 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
                 }
             } else {
                 const [hours, minutes] = subject.time.split(':');
-                const h = parseInt(hours ?? '0', 10);
-                const m = parseInt(minutes ?? '0', 10);
+                const h = Number.parseInt(hours ?? '0', 10);
+                const m = Number.parseInt(minutes ?? '0', 10);
                 const now = new Date();
                 const scheduledTime = new Date();
                 scheduledTime.setHours(h, m, 0, 0);
@@ -281,26 +297,34 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
     }, []);
 
     const totalPlanned = useMemo(
-        () => subjects.reduce((acc, curr) => acc + (parseFloat(curr.planned) || 0), 0),
+        () => subjects.reduce((acc, curr) => acc + (Number.parseFloat(curr.planned) || 0), 0),
         [subjects],
     );
 
     const totalActual = useMemo(
-        () => subjects.reduce((acc, curr) => acc + (parseFloat(curr.actual) || 0), 0),
+        () => subjects.reduce((acc, curr) => acc + (Number.parseFloat(curr.actual) || 0), 0),
         [subjects],
     );
 
     const dayRating = useMemo(() => {
         const kpiCount = subjects.filter((s) => s.kpi === 'Y').length;
         const ratio = kpiCount / subjects.length;
-        if (ratio >= 0.8) return 'Productive';
-        if (ratio >= 0.5) return 'Okayish';
+        if (ratio >= 0.8) {
+            return 'Productive';
+        }
+        if (ratio >= 0.5) {
+            return 'Okayish';
+        }
         return 'Unproductive';
     }, [subjects]);
 
     const dayRatingColor = useMemo(() => {
-        if (dayRating === 'Productive') return 'text-app-accent-success';
-        if (dayRating === 'Okayish') return 'text-app-accent-warning';
+        if (dayRating === 'Productive') {
+            return 'text-app-accent-success';
+        }
+        if (dayRating === 'Okayish') {
+            return 'text-app-accent-warning';
+        }
         return 'text-app-accent-error';
     }, [dayRating]);
 
@@ -436,18 +460,26 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
                                 <Repeat2 size={14} />
                             </button>
                         </div>
-                        {/* Row 4: Mon, Tue... day indicators (view only) */}
+                        {/* Row 4: Sun, Mon, Tue... day indicators (view only) */}
                         <div className="flex flex-wrap items-center gap-1.5 opacity-80">
-                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayLabel, dayIdx) => {
-                                const isActive = subject.recurring && subject.recurringDays?.includes(dayIdx);
+                            {[
+                                { label: 'Sun', value: 0 },
+                                { label: 'Mon', value: 1 },
+                                { label: 'Tue', value: 2 },
+                                { label: 'Wed', value: 3 },
+                                { label: 'Thu', value: 4 },
+                                { label: 'Fri', value: 5 },
+                                { label: 'Sat', value: 6 },
+                            ].map((day) => {
+                                const isActive = subject.recurring && subject.recurringDays?.includes(day.value);
                                 return (
                                     <span
-                                        key={dayLabel}
+                                        key={day.value}
                                         className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors
                                             ${isActive ? 'bg-blue-500 text-white' : 'bg-app-bg text-app-text-muted'}
                                         `}
                                     >
-                                        {dayLabel}
+                                        {day.label}
                                     </span>
                                 );
                             })}

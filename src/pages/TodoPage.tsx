@@ -9,7 +9,9 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
 
     const handleAdd = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!newItem.trim()) return;
+        if (!newItem.trim()) {
+            return;
+        }
 
         const newTodo: Todo = {
             id: Date.now(),
@@ -19,13 +21,13 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
             reminder: false,
         };
 
-        setTodos([newTodo, ...todos]);
+        setTodos((prev) => [newTodo, ...prev]);
         setNewItem('');
     };
 
     const toggleTodo = (id: number) => {
-        setTodos(
-            todos.map((todo) => {
+        setTodos((prev) =>
+            prev.map((todo) => {
                 if (todo.id === id) {
                     return { ...todo, completed: !todo.completed };
                 }
@@ -35,16 +37,18 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
     };
 
     const deleteTodo = async (id: number) => {
-        const todo = todos.find((t) => t.id === id);
-        if (todo?.reminder) {
-            await NotificationService.cancelNotification(id);
-        }
-        setTodos(todos.filter((t) => t.id !== id));
+        setTodos((prev) => {
+            const todo = prev.find((t) => t.id === id);
+            if (todo?.reminder) {
+                NotificationService.cancelNotification(id);
+            }
+            return prev.filter((t) => t.id !== id);
+        });
     };
 
     const handleTimeChange = (id: number, newTime: string) => {
-        setTodos(
-            todos.map((todo) => {
+        setTodos((prev) =>
+            prev.map((todo) => {
                 if (todo.id === id) {
                     const updatedTodo: Todo = { ...todo, time: newTime };
                     if (todo.reminder) {
@@ -58,9 +62,11 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
         );
     };
 
-    const handleReminder = async (id: number) => {
+    const handleReminder = (id: number) => {
         const todo = todos.find((t) => t.id === id);
-        if (!todo) return;
+        if (!todo) {
+            return;
+        }
 
         if (!todo.time) {
             alert('Please set a time for the reminder first.');
@@ -68,30 +74,31 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
         }
 
         if (todo.reminder) {
-            const success = await NotificationService.cancelNotification(id);
-            if (success) {
-                setTodos(todos.map((t) => (t.id === id ? { ...t, reminder: false } : t)));
-            }
+            NotificationService.cancelNotification(id).then((success) => {
+                if (success) {
+                    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, reminder: false } : t)));
+                }
+            });
         } else {
             const [hours, minutes] = todo.time.split(':');
-            const h = parseInt(hours ?? '0', 10);
-            const m = parseInt(minutes ?? '0', 10);
+            const h = Number.parseInt(hours ?? '0', 10);
+            const m = Number.parseInt(minutes ?? '0', 10);
 
-            const result = await NotificationService.scheduleDailyNotification(
+            NotificationService.scheduleDailyNotification(
                 id,
                 `ToDo Reminder`,
                 `Don't forget: ${todo.text}`,
                 h,
                 m,
                 'TODO_ACTIONS',
-            );
-
-            if (result.success) {
-                setTodos(todos.map((t) => (t.id === id ? { ...t, reminder: true } : t)));
-                alert(`Reminder scheduled to repeat daily at ${todo.time}.`);
-            } else {
-                alert(`Failed to schedule notification: ${result.error || 'Unknown error'}`);
-            }
+            ).then((result) => {
+                if (result.success) {
+                    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, reminder: true } : t)));
+                    alert(`Reminder scheduled to repeat daily at ${todo.time}.`);
+                } else {
+                    alert(`Failed to schedule notification: ${result.error || 'Unknown error'}`);
+                }
+            });
         }
     };
 

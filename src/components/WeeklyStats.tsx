@@ -99,7 +99,9 @@ const WeeklyStats = memo(({ currentDate }: WeeklyStatsProps) => {
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0] ?? '', []);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            return;
+        }
 
         const loadWeekData = async () => {
             setLoading(true);
@@ -130,8 +132,8 @@ const WeeklyStats = memo(({ currentDate }: WeeklyStatsProps) => {
         weekDates.forEach((dateStr) => {
             const dayData = weekData[dateStr];
             if (dayData?.subjects) {
-                const dayActual = dayData.subjects.reduce((sum, s) => sum + (parseFloat(s.actual) || 0), 0);
-                const dayPlanned = dayData.subjects.reduce((sum, s) => sum + (parseFloat(s.planned) || 0), 0);
+                const dayActual = dayData.subjects.reduce((sum, s) => sum + (Number.parseFloat(s.actual) || 0), 0);
+                const dayPlanned = dayData.subjects.reduce((sum, s) => sum + (Number.parseFloat(s.planned) || 0), 0);
                 totalActual += dayActual;
                 totalPlanned += dayPlanned;
 
@@ -160,7 +162,9 @@ const WeeklyStats = memo(({ currentDate }: WeeklyStatsProps) => {
     const weekLabel = useMemo(() => {
         const first = weekDates[0];
         const last = weekDates[6];
-        if (!first || !last) return '';
+        if (!first || !last) {
+            return '';
+        }
         const start = formatDateLabel(first);
         const end = formatDateLabel(last);
         return `${start} - ${end}`;
@@ -250,12 +254,12 @@ const WeeklyStats = memo(({ currentDate }: WeeklyStatsProps) => {
                                         const dayData = weekData[dateStr];
                                         const actual =
                                             dayData?.subjects?.reduce(
-                                                (sum, s) => sum + (parseFloat(s.actual) || 0),
+                                                (sum, s) => sum + (Number.parseFloat(s.actual) || 0),
                                                 0,
                                             ) || 0;
                                         const planned =
                                             dayData?.subjects?.reduce(
-                                                (sum, s) => sum + (parseFloat(s.planned) || 0),
+                                                (sum, s) => sum + (Number.parseFloat(s.planned) || 0),
                                                 0,
                                             ) || 360;
 

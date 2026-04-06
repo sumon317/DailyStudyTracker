@@ -42,7 +42,7 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }: InbuiltAlarmProps)
 
     const removeAlarm = async (id: string) => {
         if (Capacitor.isNativePlatform()) {
-            await NativeAlarm.cancelAlarm({ id: parseInt(id, 10) }).catch(() => {
+            await NativeAlarm.cancelAlarm({ id: Number.parseInt(id, 10) }).catch(() => {
                 // Silently ignore alarm cancel errors
             });
         }
@@ -55,7 +55,7 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }: InbuiltAlarmProps)
                 if (a.id === id) {
                     if (a.active) {
                         if (Capacitor.isNativePlatform()) {
-                            NativeAlarm.cancelAlarm({ id: parseInt(id, 10) }).catch(() => {
+                            NativeAlarm.cancelAlarm({ id: Number.parseInt(id, 10) }).catch(() => {
                                 // Silently ignore alarm cancel errors
                             });
                         }
@@ -70,11 +70,13 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }: InbuiltAlarmProps)
 
     const toggleAlarm = async (id: string) => {
         const alarm = alarms.find((a) => a.id === id);
-        if (!alarm) return;
+        if (!alarm) {
+            return;
+        }
 
         if (alarm.active) {
             if (Capacitor.isNativePlatform()) {
-                await NativeAlarm.cancelAlarm({ id: parseInt(id, 10) }).catch(() => {
+                await NativeAlarm.cancelAlarm({ id: Number.parseInt(id, 10) }).catch(() => {
                     // Silently ignore alarm cancel errors
                 });
             }
@@ -86,8 +88,8 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }: InbuiltAlarmProps)
             }
 
             const [hours, minutes] = alarm.time.split(':');
-            const h = parseInt(hours ?? '0', 10);
-            const m = parseInt(minutes ?? '0', 10);
+            const h = Number.parseInt(hours ?? '0', 10);
+            const m = Number.parseInt(minutes ?? '0', 10);
 
             const now = new Date();
             const alarmTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
@@ -99,7 +101,7 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }: InbuiltAlarmProps)
             if (Capacitor.isNativePlatform()) {
                 try {
                     await NativeAlarm.scheduleAlarm({
-                        id: parseInt(id, 10),
+                        id: Number.parseInt(id, 10),
                         time: alarmTime.getTime(),
                         title: 'Focus Alarm',
                         body: 'Your scheduled alarm is ringing!',
@@ -238,7 +240,7 @@ const InbuiltAlarm = ({ globalAlarmSource, stopGlobalAlarm }: InbuiltAlarmProps)
                     >
                         <motion.div
                             animate={{ scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.2 }}
+                            transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.2 }}
                             className="text-white mb-4 drop-shadow-lg"
                         >
                             <Bell size={56} />

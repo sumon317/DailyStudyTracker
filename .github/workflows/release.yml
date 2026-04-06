@@ -47,7 +47,7 @@ jobs:
 
           # Update build.gradle versionName and versionCode
           sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" android/app/build.gradle
-          # Generate versionCode from version (e.g., 2.2.0 -> 20200)
+          # Generate versionCode from version (e.g., 2.2.1 -> 20201)
           VERSION_CODE=$(echo $VERSION | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')
           sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" android/app/build.gradle
 
@@ -98,39 +98,73 @@ jobs:
           path: android/app/build/outputs/apk/release/DailyStudyTracker.apk
           retention-days: 30
 
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            # If no previous tag, show last 20 commits
+            CHANGES=$(git log --oneline -20 --format="- %s")
+          else
+            # Get commits since previous tag
+            CHANGES=$(git log $PREV_TAG..HEAD --format="- %s")
+          fi
+          
+          # Create changelog
+          cat << EOF > changelog.md
+          ## What's New in v${{ env.VERSION }}
+
+          ### 🐛 Bug Fixes
+          - Fixed exportData returning meaningless count
+          - Fixed ErrorLog removeError using wrong filter (index vs id)
+          - Fixed CountdownTimer useEffect re-running every second
+          - Fixed TrackerForm day indicators (Mon=1, not Mon=0)
+          - Fixed StudyCharts using subject.name as key (duplicates)
+          - Fixed TodoPage setTodos using stale closures
+          - Fixed App.tsx update check running on every date change
+          - Fixed DataProvider generateId collisions across tabs
+
+          ### ✨ Features
+          - Auto-update system with modal popup and progress bar
+          - "Check Updates" button in header menu
+          - Widget auto-updates every 10 seconds on data save
+          - Widget timer controls work across all instances
+
+          ### 🎨 Improvements
+          - Reduced audio file size (5.9MB → 1.4MB)
+          - Compressed PNG assets (~2MB → 36KB)
+          - Added ProGuard rules for release builds
+          - Added reduced-motion support for accessibility
+          - Improved type safety with memoized setters
+          - Optimized build with code splitting and terser minification
+
+          ### 🧪 Testing
+          - Added 34 new unit tests for utils
+          - Total tests: 90 (up from 56)
+
+          ### 📦 Build
+          - Bundle size: ~2.9MB (gzipped)
+          - APK will be generated automatically
+
+          ---
+
+          **Install:** Download the APK below and install on your Android device.
+          EOF
+          
+          cat changelog.md
+          echo "CHANGES<<EOF" >> $GITHUB_ENV
+          cat changelog.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           tag_name: ${{ env.VERSION }}
           name: "Daily Study Tracker v${{ env.VERSION }}"
-          body: |
-            ## What's New in v${{ env.VERSION }}
-
-            ### Architecture
-            - Full TypeScript migration (strict mode, zero `any`)
-            - Provider-based architecture (Theme, Data, Toast, ErrorBoundary)
-            - Code-split routes for optimal loading
-
-            ### Features
-            - Material Design 3 theme system (6 themes + adaptive color picker)
-            - Input sanitization for XSS prevention
-            - PWA support with offline capability
-            - Error boundaries with graceful recovery
-            - Skeleton loading states
-
-            ### Quality
-            - 56 comprehensive tests
-            - Biome linting (0 errors, 0 warnings)
-            - CI/CD pipeline with automated testing
-
-            ### Performance
-            - 50% bundle size reduction (929KB → 457KB)
-            - Lazy-loaded route chunks
-            - Extensive memoization
-
-            ---
-            **Install:** Download the APK and install on your Android device.
+          body: ${{ env.CHANGES }}
           files: android/app/build/outputs/apk/release/DailyStudyTracker.apk
           generate_release_notes: false
           draft: false

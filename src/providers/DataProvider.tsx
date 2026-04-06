@@ -12,16 +12,15 @@ import {
 import type {
     ChecklistItem,
     DataProviderValue,
-    DataValueSetter,
     ErrorLogEntry,
     QualityCheckItem,
     RecurringSubject,
     Subject,
     Todo,
 } from '../types';
+import { updateWidget } from '../utils/widgetBridge';
 
-let nextId = Date.now();
-const generateId = () => ++nextId;
+const generateId = () => Date.now() + Math.floor(Math.random() * 10000);
 
 const DataContext = createContext<DataProviderValue | null>(null);
 
@@ -83,7 +82,9 @@ export default function DataProvider({ children }: DataProviderProps) {
     useEffect(() => {
         const init = async () => {
             const storedTodos = await loadGlobalTodos();
-            if (storedTodos) setTodosState(storedTodos);
+            if (storedTodos) {
+                setTodosState(storedTodos);
+            }
             await loadDataForDate(dateRef.current);
         };
         init();
@@ -98,6 +99,7 @@ export default function DataProvider({ children }: DataProviderProps) {
 
     const saveData = useCallback(async () => {
         setIsSaving(true);
+        const currentDate = dateRef.current;
         try {
             const data = {
                 subjects,
@@ -106,17 +108,20 @@ export default function DataProvider({ children }: DataProviderProps) {
                 dayRating,
                 errors,
             };
-            await saveToNativeStorage(dateRef.current, data);
-            await syncRecurringSubjects(subjects, dateRef.current);
+            await saveToNativeStorage(currentDate, data);
+            await syncRecurringSubjects(subjects, currentDate);
             setHasUnsavedChanges(false);
             setLastSaved(new Date().toISOString());
+            updateWidget(subjects);
         } finally {
             setIsSaving(false);
         }
     }, [subjects, checklistItems, qualityChecks, dayRating, errors]);
 
     useEffect(() => {
-        if (!hasUnsavedChanges) return;
+        if (!hasUnsavedChanges) {
+            return;
+        }
         const timer = setInterval(saveData, 10000);
         return () => clearInterval(timer);
     }, [hasUnsavedChanges, saveData]);
@@ -132,32 +137,37 @@ export default function DataProvider({ children }: DataProviderProps) {
         [hasUnsavedChanges, saveData, loadDataForDate],
     );
 
-    const exportData = useCallback((): number => {
-        const data = {
-            subjects,
-            checklistItems,
-            qualityChecks,
-            dayRating,
-            errors,
-            todos,
-        };
-        const count = Object.values(data).flat().length;
-        downloadBackup();
+    const exportData = useCallback(async (): Promise<number> => {
+        const count = await downloadBackup();
         return count;
-    }, [subjects, checklistItems, qualityChecks, dayRating, errors, todos]);
+    }, []);
 
     const importData = useCallback(
         async (file: File) => {
             const text = await file.text();
             const parsed = JSON.parse(text) as Record<string, unknown>;
-            if (!parsed) return;
+            if (!parsed) {
+                return;
+            }
 
-            if (parsed.subjects) setSubjectsState(parsed.subjects as Subject[]);
-            if (parsed.checklistItems) setChecklistItemsState(parsed.checklistItems as ChecklistItem[]);
-            if (parsed.qualityChecks) setQualityChecksState(parsed.qualityChecks as QualityCheckItem[]);
-            if (parsed.dayRating !== undefined) setDayRatingState(parsed.dayRating as string);
-            if (parsed.errors) setErrorsState(parsed.errors as ErrorLogEntry[]);
-            if (parsed.todos) setTodosState(parsed.todos as Todo[]);
+            if (parsed.subjects) {
+                setSubjectsState(parsed.subjects as Subject[]);
+            }
+            if (parsed.checklistItems) {
+                setChecklistItemsState(parsed.checklistItems as ChecklistItem[]);
+            }
+            if (parsed.qualityChecks) {
+                setQualityChecksState(parsed.qualityChecks as QualityCheckItem[]);
+            }
+            if (parsed.dayRating !== undefined) {
+                setDayRatingState(parsed.dayRating as string);
+            }
+            if (parsed.errors) {
+                setErrorsState(parsed.errors as ErrorLogEntry[]);
+            }
+            if (parsed.todos) {
+                setTodosState(parsed.todos as Todo[]);
+            }
 
             const subjectsData = (parsed.subjects as Subject[]) || subjects;
             const checklistData = (parsed.checklistItems as ChecklistItem[]) || checklistItems;
@@ -206,12 +216,36 @@ export default function DataProvider({ children }: DataProviderProps) {
         });
     }, [subjects, checklistItems, qualityChecks, dayRating, errors, todos]);
 
-    const wrapSet =
-        <T,>(setter: React.Dispatch<React.SetStateAction<T>>): DataValueSetter<T> =>
-        (updater) => {
-            setter(updater);
+    const setSubjectsWrapped = useCallback((updater: Subject[] | ((prev: Subject[]) => Subject[])) => {
+        setSubjectsState(updater);
+        setHasUnsavedChanges(true);
+    }, []);
+
+    const setChecklistItemsWrapped = useCallback(
+        (updater: ChecklistItem[] | ((prev: ChecklistItem[]) => ChecklistItem[])) => {
+            setChecklistItemsState(updater);
             setHasUnsavedChanges(true);
-        };
+        },
+        [],
+    );
+
+    const setQualityChecksWrapped = useCallback(
+        (updater: QualityCheckItem[] | ((prev: QualityCheckItem[]) => QualityCheckItem[])) => {
+            setQualityChecksState(updater);
+            setHasUnsavedChanges(true);
+        },
+        [],
+    );
+
+    const setErrorsWrapped = useCallback((updater: ErrorLogEntry[] | ((prev: ErrorLogEntry[]) => ErrorLogEntry[])) => {
+        setErrorsState(updater);
+        setHasUnsavedChanges(true);
+    }, []);
+
+    const setTodosWrapped = useCallback((updater: Todo[] | ((prev: Todo[]) => Todo[])) => {
+        setTodosState(updater);
+        setHasUnsavedChanges(true);
+    }, []);
 
     const value: DataProviderValue = {
         date,
@@ -225,15 +259,15 @@ export default function DataProvider({ children }: DataProviderProps) {
         isSaving,
         lastSaved,
         setDate,
-        setSubjects: wrapSet(setSubjectsState),
-        setChecklistItems: wrapSet(setChecklistItemsState),
-        setQualityChecks: wrapSet(setQualityChecksState),
+        setSubjects: setSubjectsWrapped,
+        setChecklistItems: setChecklistItemsWrapped,
+        setQualityChecks: setQualityChecksWrapped,
         setDayRating: (val: string) => {
             setDayRatingState(val);
             setHasUnsavedChanges(true);
         },
-        setErrors: wrapSet(setErrorsState),
-        setTodos: wrapSet(setTodosState),
+        setErrors: setErrorsWrapped,
+        setTodos: setTodosWrapped,
         saveData,
         exportData,
         importData,
@@ -249,6 +283,8 @@ export default function DataProvider({ children }: DataProviderProps) {
 
 export function useData(): DataProviderValue {
     const ctx = useContext(DataContext);
-    if (!ctx) throw new Error('useData must be used within a DataProvider');
+    if (!ctx) {
+        throw new Error('useData must be used within a DataProvider');
+    }
     return ctx;
 }

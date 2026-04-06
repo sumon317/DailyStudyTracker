@@ -10,7 +10,9 @@ const TimePicker = memo(({ value, onChange }: TimePickerProps) => {
     const popupRef = useRef<HTMLDivElement>(null);
 
     const parseTime = useCallback((timeStr: string): TempTime => {
-        if (!timeStr) return { h: 10, m: 0, period: 'AM' };
+        if (!timeStr) {
+            return { h: 10, m: 0, period: 'AM' };
+        }
         const parts = timeStr.split(':');
         const h = parts[0] ? Number(parts[0]) : 0;
         const m = parts[1] ? Number(parts[1]) : 0;
@@ -47,8 +49,12 @@ const TimePicker = memo(({ value, onChange }: TimePickerProps) => {
     const handleSave = () => {
         const { h, m, period } = tempTime;
         let hours24 = h;
-        if (period === 'PM' && h !== 12) hours24 += 12;
-        if (period === 'AM' && h === 12) hours24 = 0;
+        if (period === 'PM' && h !== 12) {
+            hours24 += 12;
+        }
+        if (period === 'AM' && h === 12) {
+            hours24 = 0;
+        }
 
         const timeStr = `${hours24.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         onChange(timeStr);
@@ -65,12 +71,20 @@ const TimePicker = memo(({ value, onChange }: TimePickerProps) => {
             let newVal = prev[field];
             if (field === 'h') {
                 newVal += amount;
-                if (newVal > 12) newVal = 1;
-                if (newVal < 1) newVal = 12;
+                if (newVal > 12) {
+                    newVal = 1;
+                }
+                if (newVal < 1) {
+                    newVal = 12;
+                }
             } else if (field === 'm') {
                 newVal += amount;
-                if (newVal > 59) newVal = 0;
-                if (newVal < 0) newVal = 59;
+                if (newVal > 59) {
+                    newVal = 0;
+                }
+                if (newVal < 0) {
+                    newVal = 59;
+                }
             }
             return { ...prev, [field]: newVal };
         });
@@ -104,8 +118,12 @@ const TimePicker = memo(({ value, onChange }: TimePickerProps) => {
                 left = (screenW - popoverW) / 2;
             } else {
                 left = rect.right - popoverW;
-                if (left < 10) left = rect.left;
-                if (left + popoverW > screenW - 10) left = screenW - popoverW - 10;
+                if (left < 10) {
+                    left = rect.left;
+                }
+                if (left + popoverW > screenW - 10) {
+                    left = screenW - popoverW - 10;
+                }
             }
 
             top = rect.bottom + 8;

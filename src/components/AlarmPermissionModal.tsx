@@ -4,7 +4,9 @@ import { memo } from 'react';
 import type { AlarmPermissionModalProps } from '../types';
 
 const AlarmPermissionModal = memo(({ isOpen, onClose, onOpenSettings }: AlarmPermissionModalProps) => {
-    if (!isOpen) return null;
+    if (!isOpen) {
+        return null;
+    }
 
     return (
         <AnimatePresence>

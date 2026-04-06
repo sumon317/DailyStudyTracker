@@ -165,11 +165,11 @@ describe('DataProvider', () => {
     });
 
     describe('generateId', () => {
-        it('returns unique incrementing IDs', () => {
+        it('returns unique IDs', () => {
             const { result } = renderHook(() => useData(), { wrapper: TestWrapper });
             const id1 = result.current.generateId();
             const id2 = result.current.generateId();
-            expect(id2).toBeGreaterThan(id1);
+            expect(id1).not.toBe(id2);
         });
     });
 });

@@ -15,7 +15,9 @@ export const NotificationService = {
     },
 
     async checkExactAlarmPermission(): Promise<boolean> {
-        if (!Capacitor.isNativePlatform()) return true;
+        if (!Capacitor.isNativePlatform()) {
+            return true;
+        }
 
         try {
             const result = await LocalNotifications.checkPermissions();
@@ -30,7 +32,9 @@ export const NotificationService = {
     },
 
     async openExactAlarmSettings(): Promise<void> {
-        if (!Capacitor.isNativePlatform()) return;
+        if (!Capacitor.isNativePlatform()) {
+            return;
+        }
 
         try {
             const { App } = await import('@capacitor/app');
@@ -63,7 +67,9 @@ export const NotificationService = {
     },
 
     async initialize(): Promise<void> {
-        if (!Capacitor.isNativePlatform()) return;
+        if (!Capacitor.isNativePlatform()) {
+            return;
+        }
 
         try {
             const channelId = 'study-alarms-v3';
@@ -136,7 +142,9 @@ export const NotificationService = {
             const hasPermission = await this.checkPermissions();
             if (!hasPermission) {
                 const granted = await this.requestPermissions();
-                if (!granted) return { success: false, error: 'Permission not granted' };
+                if (!granted) {
+                    return { success: false, error: 'Permission not granted' };
+                }
             }
 
             await LocalNotifications.schedule({
@@ -176,7 +184,9 @@ export const NotificationService = {
             const hasPermission = await this.checkPermissions();
             if (!hasPermission) {
                 const granted = await this.requestPermissions();
-                if (!granted) return { success: false, error: 'Permission not granted' };
+                if (!granted) {
+                    return { success: false, error: 'Permission not granted' };
+                }
             }
 
             await LocalNotifications.schedule({

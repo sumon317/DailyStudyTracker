@@ -38,13 +38,15 @@ const ThemeSelector = memo(({ theme, setTheme }: ThemeSelectorProps) => {
             const EyeDropperClass = (
                 window as unknown as Record<string, new () => { open: () => Promise<{ sRGBHex: string }> }>
             ).EyeDropper;
-            if (!EyeDropperClass) return;
+            if (!EyeDropperClass) {
+                return;
+            }
             const eyeDropper = new EyeDropperClass();
             const result = await eyeDropper.open();
             const hex = result.sRGBHex;
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
+            const r = Number.parseInt(hex.slice(1, 3), 16);
+            const g = Number.parseInt(hex.slice(3, 5), 16);
+            const b = Number.parseInt(hex.slice(5, 7), 16);
             localStorage.setItem('adaptive-color', `${r},${g},${b}`);
             applyAdaptiveColors(r, g, b, document.documentElement.classList.contains('dark'));
         } catch (_e) {
@@ -57,7 +59,9 @@ const ThemeSelector = memo(({ theme, setTheme }: ThemeSelectorProps) => {
     }, []);
 
     const currentTheme = THEMES.find((t) => t.value === theme);
-    if (!currentTheme) return null;
+    if (!currentTheme) {
+        return null;
+    }
     const Icon = currentTheme.icon;
 
     return (
@@ -239,11 +243,21 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
     } else {
         const hue2rgb = (p: number, q: number, t: number) => {
             let tt = t;
-            if (tt < 0) tt += 1;
-            if (tt > 1) tt -= 1;
-            if (tt < 1 / 6) return p + (q - p) * 6 * tt;
-            if (tt < 1 / 2) return q;
-            if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+            if (tt < 0) {
+                tt += 1;
+            }
+            if (tt > 1) {
+                tt -= 1;
+            }
+            if (tt < 1 / 6) {
+                return p + (q - p) * 6 * tt;
+            }
+            if (tt < 1 / 2) {
+                return q;
+            }
+            if (tt < 2 / 3) {
+                return p + (q - p) * (2 / 3 - tt) * 6;
+            }
             return p;
         };
 
