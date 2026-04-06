@@ -178,6 +178,10 @@ export const NotificationService = {
         minute: number,
         actionType = 'TODO_ACTIONS',
     ): Promise<NotificationScheduleResult> {
+        if (!Capacitor.isNativePlatform()) {
+            return { success: false, error: 'Notifications not supported on web' };
+        }
+
         try {
             const id = this.safeId(originalId);
 

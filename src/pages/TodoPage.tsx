@@ -96,7 +96,9 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                     setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, reminder: true } : t)));
                     alert(`Reminder set! You will be notified daily at ${todo.time}.`);
                 } else {
-                    alert(`Failed to schedule notification: ${result.error || 'Unknown error'}`);
+                    alert(
+                        `Failed to schedule notification: ${result.error || 'Unknown error'}. Note: Reminders only work in the Android app, not the web version.`,
+                    );
                 }
             });
         }
