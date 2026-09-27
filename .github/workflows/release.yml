@@ -85,12 +85,15 @@ jobs:
             android/**/*.gradle.kts
             android/gradle/wrapper/gradle-wrapper.properties
 
-      - name: Install Android SDK components
-        shell: bash
-        run: |
-          set -euo pipefail
-          : "${ANDROID_HOME:?ANDROID_HOME is required}"
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      # The runner image does not ship every platform the build asks for, and
+      # compileSdk/targetSdk is 36. setup-android installs the command-line tools,
+      # accepts the SDK licences, and puts sdkmanager on PATH before installing
+      # the exact packages this project compiles against.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          accept-android-sdk-licenses: true
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
       - name: Sync Android project
         run: bun run android:sync
