@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Row background for the light widget theme. The RemoteViews factory picks between this and
+    widget_item_bg with setBackgroundResource so the rounded corners from the layout survive in
+    both themes; setBackgroundColor would replace the shape and square off the row.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#14000000" />
+    <corners android:radius="8dp" />
+</shape>

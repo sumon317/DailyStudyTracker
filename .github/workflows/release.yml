@@ -1,173 +1,234 @@
-name: Android Release
-
-permissions:
-  contents: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., 2.2.0)'
-        required: true
-        type: string
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build Signed APK
-    runs-on: ubuntu-latest
-
+  release:
+    name: Build, attest, and publish signed release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+      - name: Check out tagged repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          node-version: '22'
-          cache: 'npm'
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+
+      - name: Set up Node for Vitest
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.15.0
+
+      - name: Validate canonical tag and package version
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          if [[ ! "$TAG_NAME" =~ $tag_pattern ]]; then
+            printf 'Release tag must be canonical vMAJOR.MINOR.PATCH: %s\n' "$TAG_NAME" >&2
+            exit 1
+          fi
+          tag_version="${TAG_NAME#v}"
+          package_version="$(bun --print "require('./package.json').version")"
+          if [[ "$package_version" != "$tag_version" ]]; then
+            printf 'Tag %s does not match package version %s\n' "$tag_version" "$package_version" >&2
+            exit 1
+          fi
+          test -f bun.lock
+          test ! -e package-lock.json
+          head_commit="$(git rev-parse HEAD)"
+          tag_commit="$(git rev-list -n 1 "$TAG_NAME")"
+          if [[ "$head_commit" != "$tag_commit" ]]; then
+            printf 'Checked-out commit does not match %s\n' "$TAG_NAME" >&2
+            exit 1
+          fi
+          test "$(git tag --points-at "$head_commit" --list "$TAG_NAME")" = "$TAG_NAME"
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
-      - name: Set Version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/v}"
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Setting version to $VERSION"
-          npm version $VERSION --no-git-tag-version --allow-same-version
+      - name: Verify release
+        run: bun run verify
 
-          # Update build.gradle versionName and versionCode
-          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" android/app/build.gradle
-          # Generate versionCode from version (e.g., 2.2.1 -> 20201)
-          VERSION_CODE=$(echo $VERSION | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')
-          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" android/app/build.gradle
+      - name: Audit dependencies
+        run: bun audit --audit-level=high
 
-      - name: Lint
-        run: npx biome check
+      - name: Check dependency licenses
+        run: bun run license:check
 
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Run tests
-        run: npm test -- --run
-
-      - name: Build Web App
-        run: npm run build
-
-      - name: Sync Capacitor
-        run: npx cap sync android
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - name: Set up Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
         with:
+          distribution: temurin
           java-version: '21'
-          distribution: 'temurin'
           cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle
+            android/**/*.gradle.kts
+            android/gradle/wrapper/gradle-wrapper.properties
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
+      - name: Install Android SDK components
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?ANDROID_HOME is required}"
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Decode Keystore
+      - name: Sync Android project
+        run: bun run android:sync
+
+      - name: Set Android release version
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG_NAME#v}"
+          IFS=. read -r major minor patch <<< "$version"
+          if (( ${#major} > 6 || ${#minor} > 3 || ${#patch} > 3 )); then
+            printf 'Version components are too large for Android versionCode\n' >&2
+            exit 1
+          fi
+          version_code="$((10#$major * 1000000 + 10#$minor * 1000 + 10#$patch))"
+          if (( version_code < 1 || version_code > 2147483647 )); then
+            printf 'Android versionCode is outside the platform limits\n' >&2
+            exit 1
+          fi
+          TAG_VERSION="$version" VERSION_CODE="$version_code" bun -e 'const file = "android/app/build.gradle"; const version = process.env.TAG_VERSION; const code = process.env.VERSION_CODE; if (!version || !code) throw new Error("Missing Android release version"); let source = await Bun.file(file).text(); const versionName = /versionName\s+"[^"]+"/; const versionCode = /versionCode\s+\d+/; if (!versionName.test(source) || !versionCode.test(source)) throw new Error("Android version fields not found"); source = source.replace(versionName, `versionName "${version}"`).replace(versionCode, `versionCode ${code}`); await Bun.write(file, source);'
+
+      - name: Build and verify signed Android APK
+        shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release-key.jks
-
-      - name: Build Release APK
-        env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          cd android
-          ./gradlew assembleRelease
+          set -euo pipefail
+          : "${ANDROID_KEYSTORE_BASE64:?ANDROID_KEYSTORE_BASE64 is required}"
+          : "${KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
+          : "${KEY_ALIAS:?KEY_ALIAS is required}"
+          : "${KEY_PASSWORD:?KEY_PASSWORD is required}"
+          : "${ANDROID_HOME:?ANDROID_HOME is required}"
+          umask 077
+          trap 'rm -f android/app/release-key.jks' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release-key.jks
+          chmod 600 android/app/release-key.jks
+          chmod +x android/gradlew
+          (
+            cd android
+            ./gradlew --no-daemon --stacktrace assembleRelease
+          )
+          apk_path="android/app/build/outputs/apk/release/DailyStudyTracker.apk"
+          test -s "$apk_path"
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -x "$build_tools/apksigner"
+          "$build_tools/apksigner" verify --verbose --print-certs "$apk_path"
+          tag_version="${TAG_NAME#v}"
+          mkdir -p release
+          cp "$apk_path" "release/DailyStudyTracker-v${tag_version}.apk"
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: DailyStudyTracker-v${{ env.VERSION }}
-          path: android/app/build/outputs/apk/release/DailyStudyTracker.apk
-          retention-days: 30
-
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          # Get previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          if [ -z "$PREV_TAG" ]; then
-            # If no previous tag, show last 20 commits
-            CHANGES=$(git log --oneline -20 --format="- %s")
-          else
-            # Get commits since previous tag
-            CHANGES=$(git log $PREV_TAG..HEAD --format="- %s")
-          fi
-          
-          # Create changelog
-          cat << EOF > changelog.md
-          ## What's New in v${{ env.VERSION }}
-
-          ### 🐛 Bug Fixes
-          - Fixed Todo alarm firing immediately instead of at scheduled time
-          - Fixed TodoPage setTodos using stale closures
-          - Fixed exportData returning meaningless count
-          - Fixed ErrorLog removeError using wrong filter (index vs id)
-          - Fixed CountdownTimer useEffect re-running every second
-          - Fixed TrackerForm day indicators (Mon=1, not Mon=0)
-          - Fixed StudyCharts using subject.name as key (duplicates)
-          - Fixed App.tsx update check running on every date change
-          - Fixed DataProvider generateId collisions across tabs
-
-          ### ✨ Features
-          - Web Notifications support for todo reminders (uses browser Notification API)
-          - Auto-update system with modal popup and progress bar
-          - "Check Updates" button in header menu
-          - Widget auto-updates every 10 seconds on data save
-
-          ### 🎨 Improvements
-          - Reduced audio file size (5.9MB → 1.4MB)
-          - Compressed PNG assets (~2MB → 36KB)
-          - Added ProGuard rules for release builds
-          - Added reduced-motion support for accessibility
-          - Optimized build with code splitting and terser minification
-
-          ### 🧪 Testing
-          - Added 34 new unit tests for utils
-          - Total tests: 90+
-
-          ### 📦 Build
-          - Bundle size: ~2.9MB (gzipped)
-          - APK will be generated automatically
-
-          ---
-
-          **Install:** Download the APK below and install on your Android device.
-          EOF
-          
-          cat changelog.md
-          echo "CHANGES<<EOF" >> $GITHUB_ENV
-          cat changelog.md >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          tag_name: ${{ env.VERSION }}
-          name: "Daily Study Tracker v${{ env.VERSION }}"
-          body: ${{ env.CHANGES }}
-          files: android/app/build/outputs/apk/release/DailyStudyTracker.apk
-          generate_release_notes: false
-          draft: false
-          prerelease: false
+      - name: Generate changelog
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          previous_commit="$(git rev-parse "${TAG_NAME}^" 2>/dev/null || true)"
+          previous_tag=""
+          if [[ -n "$previous_commit" ]]; then
+            previous_tag="$(git describe --tags --abbrev=0 "$previous_commit" 2>/dev/null || true)"
+          fi
+          {
+            printf '# %s\n\n' "$TAG_NAME"
+            printf '## Changes\n\n'
+            if [[ -n "$previous_tag" ]]; then
+              git log --no-merges --format='* %s (%h)' "$previous_tag..$TAG_NAME"
+            else
+              git log --no-merges --format='* %s (%h)' "$TAG_NAME"
+            fi
+          } > release/CHANGELOG.md
+          test -s release/CHANGELOG.md
+
+      - name: Package and checksum release artifacts
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag_version="${TAG_NAME#v}"
+          archive_name="daily-study-tracker-${tag_version}.tar.gz"
+          apk_name="DailyStudyTracker-v${tag_version}.apk"
+          # bun.lock travels with the bundle: without it a consumer cannot
+          # reproduce the exact dependency resolution, and the archived
+          # package.json ranges would be the only record of it.
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf "release/${archive_name}" dist package.json bun.lock README.md LICENSE
+          (
+            cd release
+            sha256sum "$archive_name" "$apk_name" CHANGELOG.md > SHA256SUMS
+          )
+
+      - name: Attest release archive
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: release/*.tar.gz
+
+      - name: Attest signed Android APK
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: release/*.apk
+
+      - name: Attest checksums
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: release/SHA256SUMS
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-${{ github.ref_name }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag_version="${TAG_NAME#v}"
+          archive_name="daily-study-tracker-${tag_version}.tar.gz"
+          apk_name="DailyStudyTracker-v${tag_version}.apk"
+          gh release create "$TAG_NAME" \
+            "release/${archive_name}" \
+            "release/${apk_name}" \
+            release/CHANGELOG.md \
+            release/SHA256SUMS \
+            --repo "$GH_REPO" \
+            --verify-tag \
+            --title "$TAG_NAME" \
+            --notes-file release/CHANGELOG.md \
+            --latest

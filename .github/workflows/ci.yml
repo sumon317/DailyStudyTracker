@@ -1,52 +1,192 @@
 name: CI
 
-permissions:
-  contents: read
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  ci:
-    name: Lint, Type Check, Test & Build
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-
+  quality:
+    name: Lint, test, and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          node-version: '22'
-          cache: 'npm'
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+
+      - name: Set up Node for Vitest
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.15.0
+
+      - name: Validate Bun and lockfile policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_bun_version="$(bun --print "require('./package.json').packageManager.replace(/^bun@/, '')")"
+          test "$(bun --version)" = "$expected_bun_version"
+          test -f bun.lock
+          test ! -e package-lock.json
+
+      - name: Validate configuration syntax
+        run: bun run config:check
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
+
+      - name: Validate dependency tree
+        run: bun pm ls --all > /dev/null
+
+      - name: Audit dependencies
+        run: bun audit --audit-level=high
+
+      - name: Check dependency licenses
+        run: bun run license:check
+
+      - name: Validate public asset references
+        run: bun run assets:check
 
       - name: Lint
-        run: npx biome check
+        run: bun run lint
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Typecheck
+        run: bun run typecheck
 
-      - name: Run tests
-        run: npm test -- --run
+      - name: Test
+        run: bun run test:run
 
-      - name: Build
-        run: npm run build
+      - name: Test with coverage
+        run: bun run test:coverage
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - name: Build production PWA
+        run: bun run build
+
+      - name: Validate generated PWA output
+        run: bun run pwa:check
+
+      - name: Check whitespace errors
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${BASE_SHA:-}" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            if git rev-parse --verify --quiet HEAD~1 > /dev/null; then
+              BASE_SHA="$(git rev-parse HEAD~1)"
+            else
+              printf 'No base commit is available for the whitespace check.\n' >&2
+              exit 1
+            fi
+          fi
+          if ! git cat-file -e "$BASE_SHA^{commit}" 2> /dev/null; then
+            printf 'Base commit %s is not present in this checkout.\n' "$BASE_SHA" >&2
+            exit 1
+          fi
+          range="$BASE_SHA..$HEAD_SHA"
+          printf 'Checking whitespace in %s\n' "$range"
+          git diff --check "$range"
+          git diff --check
+          printf 'No whitespace errors found.\n'
+
+  android-unit-tests:
+    name: Android JVM unit tests
+    runs-on: ubuntu-24.04
+    # The job installs the JS toolchain, builds the web bundle, downloads the
+    # Android SDK and a Gradle distribution, and then resolves the Android
+    # Gradle plugin before it can compile a single test. That is far more than
+    # the web job does, so it gets a larger - but still bounded - limit:
+    # without one a wedged daemon or a slow mirror holds the whole run open
+    # until the 6-hour default.
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          name: dist
-          path: dist/
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # android/capacitor.settings.gradle points the Gradle build at
+      # ../node_modules/@capacitor/*, and app/capacitor.build.gradle applies
+      # ../capacitor-cordova-android-plugins/cordova.variables.gradle. Both are
+      # generated (the second is also gitignored), so the Gradle build cannot be
+      # configured at all until the JS dependencies are installed and
+      # `cap sync` has run. The unit tests compile against those projects
+      # because they cover the app's Capacitor plugins.
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `android:sync` is `vite build && cap sync android`: the sync copies
+      # dist/ into the Android assets and regenerates the two Gradle files
+      # above, so it also provides the webDir that Capacitor requires.
+      - name: Build web assets and sync the Android project
+        run: bun run android:sync
+
+      # The runner image does not ship every platform the build asks for, and
+      # compileSdk/targetSdk is 36.
+      - name: Install Android SDK components
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?ANDROID_HOME is required}"
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+
+      - name: Validate the Gradle wrapper policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f android/gradlew
+          # Set the bit from the job rather than trusting the committed mode, so a
+          # checkout that lost it cannot turn the test step into "permission denied".
+          chmod +x android/gradlew
+          # The build must go through the checked-in wrapper rather than a Gradle
+          # that happens to be on the runner's PATH, and the wrapper must resolve
+          # to a pinned distribution rather than "latest".
+          grep -Eq '^distributionUrl=https(\\:)?//services\.gradle\.org/distributions/gradle-[0-9.]+-(bin|all)\.zip$' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          grep -Eq '^distributionSha256Sum=[0-9a-f]{64}$' android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Run the JVM unit tests
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain testDebugUnitTest
+
+      - name: Upload the test reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: android-unit-test-reports
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest/
+            android/app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
           retention-days: 7

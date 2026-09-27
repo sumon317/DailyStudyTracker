@@ -1,8 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        USE_FULL_SCREEN_INTENT is required by the alarm path. Since Android 10 (API 29) a
+        BroadcastReceiver may not start an activity from the background, and an exact alarm
+        only exempts a foreground *service* start, so the direct AlarmActivity launch in
+        alarm/AlarmReceiver is dropped whenever the app is not in the foreground. The alarm
+        therefore also posts a high-importance notification that carries a full-screen intent
+        (see alarm/AlarmNotifications); a system-sent PendingIntent and a full-screen intent are
+        both permitted background activity launch paths.
+
+        From Android 14 (API 34) this is no longer a normal permission whose grant follows the
+        manifest: the platform decides per app and NotificationManager.canUseFullScreenIntent()
+        is the only way to find out. Sideloading is not a guarantee at that level either - the
+        install-time default applies to apps that still target API 33, and this app targets 36.
+        What does keep the grant available is the pair below: USE_EXACT_ALARM is the permission
+        the platform reserves for genuine alarm-clock apps, so declaring it is what qualifies
+        this app for the grant rather than leaving it to the user's settings toggle.
+
+        Nothing here depends on that succeeding. The plugin queries
+        canUseFullScreenIntent() at runtime and, when the grant is absent, posts a heads-up
+        notification that stays dismissible and keeps its own sound, so the alarm is still
+        delivered on a tap instead of opening over the lock screen by itself.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!--
+        Both exact-alarm permissions are declared on purpose. SCHEDULE_EXACT_ALARM is the
+        user-revocable one and covers API 31-33; USE_EXACT_ALARM is auto-granted to alarm-clock
+        apps from API 33 and is what makes canScheduleExactAlarms() true without a user
+        detour. scheduleDefinition falls back to an inexact alarm rather than dropping the alarm
+        when neither is available, so declaring the pair is an optimisation, not a requirement.
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -11,17 +54,15 @@
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
-            android:name=".MainActivity"
+            android:exported="true"
             android:label="@string/title_activity_main"
-            android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
-
+            android:name=".MainActivity"
+            android:theme="@style/AppTheme.NoActionBarLaunch">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
 
         <provider
@@ -31,65 +72,73 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths"></meta-data>
+                android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Widget Provider -->
         <receiver
-            android:name=".StudyWidgetProvider"
-            android:label="Study Tracker"
-            android:exported="true">
+            android:name=".widget.StudyWidgetProvider"
+            android:exported="false"
+            android:label="Study Tracker">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.sumon.studytracker.ACTION_TIMER_START" />
-                <action android:name="com.sumon.studytracker.ACTION_TIMER_PAUSE" />
-                <action android:name="com.sumon.studytracker.ACTION_TIMER_RESET" />
-                <action android:name="com.sumon.studytracker.ACTION_THEME_TOGGLE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
 
-        <!-- Widget Service -->
+        <receiver
+            android:name=".widget.WidgetActionReceiver"
+            android:exported="false" />
+
         <service
-            android:name=".StudyWidgetService"
+            android:name=".widget.StudyWidgetService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
-        <!-- Stopwatch Notification Service -->
         <service
-            android:name=".StopwatchService"
+            android:name=".service.StopwatchService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
-        <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Focus Timer to keep the user engaged and aware of remaining time" />
+        <property
+            android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+            android:value="Focus Timer to keep the user engaged and aware of remaining time" />
 
-        <!-- Foreground Service Plugin -->
-        <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
-        <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="specialUse" />
-
-        <!-- 100% Reliable Native Alarm System -->
-        <receiver android:name=".AlarmReceiver" android:exported="false" />
-        <activity 
-            android:name=".AlarmActivity"
-            android:showOnLockScreen="true"
-            android:theme="@style/AppTheme.NoActionBar"
+        <receiver
+            android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver"
+            android:exported="false" />
+        <service
+            android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
             android:exported="false"
-            android:launchMode="singleTask" />
+            android:foregroundServiceType="specialUse" />
+
+        <!--
+            Both alarm receivers stay unexported: an unexported receiver still receives system
+            broadcasts such as BOOT_COMPLETED and MY_PACKAGE_REPLACED, so nothing is lost while
+            no other application can inject an alarm.
+        -->
+        <receiver
+            android:name=".alarm.AlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".alarm.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".alarm.AlarmActivity"
+            android:exported="false"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:enableOnBackInvokedCallback="false"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/AppTheme.NoActionBar" />
     </application>
-
-    <!-- Permissions -->
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 </manifest>

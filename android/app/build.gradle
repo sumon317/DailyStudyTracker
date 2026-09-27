@@ -7,7 +7,11 @@ android {
         applicationId "com.sumon.studytracker"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 20202
+        // Play-Store style version code: MAJOR * 1000000 + MINOR * 1000 + PATCH,
+        // so 2.2.2 -> 2002002. The tag release workflow recomputes both fields
+        // from the tag before it assembles the signed APK; this value keeps a
+        // local release build on the same, monotonic scale.
+        versionCode 2002002
         versionName "2.2.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -18,9 +22,10 @@ android {
     }
     signingConfigs {
         release {
-            // Strictly enforce signing configuration to debug missing secrets
-            println "DEBUG: Configuring release signing. KEYSTORE_PASSWORD present: " + (System.getenv("KEYSTORE_PASSWORD") != null)
-            
+            // Strictly enforce signing configuration: every value is read from the
+            // environment and nothing is defaulted, so a release build that is
+            // missing secrets fails here instead of shipping unsigned. These
+            // secrets must never be logged, so the presence check stays silent.
             storeFile = file("release-key.jks")
             storePassword = System.getenv("KEYSTORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
@@ -28,15 +33,16 @@ android {
         }
     }
 
-    lintOptions {
-        checkReleaseBuilds false
-        abortOnError false
+    lint {
+        checkReleaseBuilds = true
+        abortOnError = true
     }
 
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

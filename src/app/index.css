@@ -1,0 +1,462 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --color-app-bg: 247 249 252;
+        --color-app-surface: 255 255 255;
+        --color-app-surface-variant: 228 230 236;
+        --color-app-text-main: 28 28 32;
+        --color-app-text-muted: 92 92 108;
+        --color-app-border: 216 218 226;
+        --color-app-primary: 0 98 160;
+        --color-app-primary-hover: 0 78 128;
+        --color-app-primary-fg: 255 255 255;
+        --color-app-primary-container: 204 230 255;
+        --color-app-primary-container-text: 0 70 116;
+        --color-app-on-surface-variant: 68 70 78;
+        --color-app-outline: 188 190 198;
+        --color-app-outline-variant: 228 230 236;
+        --color-app-inverse-surface: 48 48 54;
+        --color-app-inverse-text: 236 236 242;
+        --color-app-accent-success: 0 128 64;
+        --color-app-accent-warning: 146 92 0;
+        --color-app-accent-error: 186 26 26;
+        --color-app-warning-container: 255 243 194;
+        --color-app-warning-container-text: 120 79 0;
+        --color-app-scrim: 0 0 0;
+        --color-app-elevation-1: 0 0 0;
+        --color-app-elevation-2: 0 0 0;
+        --color-app-elevation-3: 0 0 0;
+    }
+
+    .dark {
+        --color-app-bg: 16 18 22;
+        --color-app-surface: 28 30 36;
+        --color-app-surface-variant: 56 58 66;
+        --color-app-text-main: 228 228 236;
+        --color-app-text-muted: 160 162 174;
+        --color-app-border: 60 62 70;
+        --color-app-primary: 140 198 255;
+        --color-app-primary-hover: 170 210 255;
+        --color-app-primary-fg: 0 50 86;
+        --color-app-primary-container: 0 74 122;
+        --color-app-primary-container-text: 204 230 255;
+        --color-app-on-surface-variant: 188 190 198;
+        --color-app-outline: 128 130 138;
+        --color-app-outline-variant: 56 58 66;
+        --color-app-inverse-surface: 228 228 236;
+        --color-app-inverse-text: 48 48 54;
+        --color-app-accent-success: 100 200 140;
+        --color-app-accent-warning: 245 190 70;
+        --color-app-accent-error: 255 140 140;
+        --color-app-warning-container: 75 55 10;
+        --color-app-warning-container-text: 255 226 150;
+        --color-app-scrim: 0 0 0;
+        --color-app-elevation-1: 0 0 0;
+        --color-app-elevation-2: 0 0 0;
+        --color-app-elevation-3: 0 0 0;
+    }
+
+    .theme-material-light {
+        --color-app-bg: 248 252 250;
+        --color-app-surface: 255 255 255;
+        --color-app-surface-variant: 218 230 226;
+        --color-app-text-main: 24 32 30;
+        --color-app-text-muted: 80 96 92;
+        --color-app-border: 200 214 210;
+        --color-app-primary: 0 110 100;
+        --color-app-primary-hover: 0 88 80;
+        --color-app-primary-fg: 255 255 255;
+        --color-app-primary-container: 160 234 222;
+        --color-app-primary-container-text: 0 82 74;
+        --color-app-on-surface-variant: 64 78 74;
+        --color-app-outline: 172 186 182;
+        --color-app-outline-variant: 218 230 226;
+        --color-app-inverse-surface: 44 50 48;
+        --color-app-inverse-text: 224 232 230;
+        --color-app-accent-success: 0 128 64;
+        --color-app-accent-warning: 146 92 0;
+        --color-app-accent-error: 186 26 26;
+        --color-app-warning-container: 255 243 194;
+        --color-app-warning-container-text: 120 79 0;
+        --color-app-scrim: 0 0 0;
+        --color-app-elevation-1: 0 0 0;
+        --color-app-elevation-2: 0 0 0;
+        --color-app-elevation-3: 0 0 0;
+    }
+
+    .dark.theme-material-light {
+        --color-app-bg: 16 20 18;
+        --color-app-surface: 24 30 28;
+        --color-app-surface-variant: 52 62 60;
+        --color-app-text-main: 220 230 228;
+        --color-app-text-muted: 156 170 166;
+        --color-app-border: 56 66 64;
+        --color-app-primary: 120 210 196;
+        --color-app-primary-hover: 150 226 212;
+        --color-app-primary-fg: 0 56 50;
+        --color-app-primary-container: 0 82 74;
+        --color-app-primary-container-text: 160 234 222;
+        --color-app-on-surface-variant: 172 186 182;
+        --color-app-outline: 116 130 126;
+        --color-app-outline-variant: 52 62 60;
+        --color-app-inverse-surface: 220 230 228;
+        --color-app-inverse-text: 44 50 48;
+        --color-app-accent-success: 100 200 140;
+        --color-app-accent-warning: 245 190 70;
+        --color-app-accent-error: 255 140 140;
+        --color-app-warning-container: 75 55 10;
+        --color-app-warning-container-text: 255 226 150;
+        --color-app-scrim: 0 0 0;
+        --color-app-elevation-1: 0 0 0;
+        --color-app-elevation-2: 0 0 0;
+        --color-app-elevation-3: 0 0 0;
+    }
+
+    .theme-material-dark {
+        --color-app-bg: 16 14 20;
+        --color-app-surface: 26 24 32;
+        --color-app-surface-variant: 56 54 64;
+        --color-app-text-main: 230 226 236;
+        --color-app-text-muted: 164 160 176;
+        --color-app-border: 62 60 72;
+        --color-app-primary: 200 176 255;
+        --color-app-primary-hover: 218 200 255;
+        --color-app-primary-fg: 56 36 90;
+        --color-app-primary-container: 80 60 120;
+        --color-app-primary-container-text: 224 210 255;
+        --color-app-on-surface-variant: 192 188 204;
+        --color-app-outline: 132 128 144;
+        --color-app-outline-variant: 56 54 64;
+        --color-app-inverse-surface: 230 226 236;
+        --color-app-inverse-text: 46 44 52;
+        --color-app-accent-success: 100 200 140;
+        --color-app-accent-warning: 245 190 70;
+        --color-app-accent-error: 255 140 140;
+        --color-app-warning-container: 75 55 10;
+        --color-app-warning-container-text: 255 226 150;
+        --color-app-scrim: 0 0 0;
+        --color-app-elevation-1: 0 0 0;
+        --color-app-elevation-2: 0 0 0;
+        --color-app-elevation-3: 0 0 0;
+    }
+
+    .theme-adaptive {
+        --color-app-bg: var(--adaptive-light-bg, 247 249 252);
+        --color-app-surface: var(--adaptive-light-surface, 255 255 255);
+        --color-app-surface-variant: var(--adaptive-light-surface-variant, 228 230 236);
+        --color-app-text-main: var(--adaptive-light-text-main, 28 28 32);
+        --color-app-text-muted: var(--adaptive-light-text-muted, 92 92 108);
+        --color-app-border: var(--adaptive-light-border, 216 218 226);
+        --color-app-primary: var(--adaptive-light-primary, 0 98 160);
+        --color-app-primary-hover: var(--adaptive-light-primary-hover, 0 78 128);
+        --color-app-primary-fg: var(--adaptive-light-primary-fg, 255 255 255);
+        --color-app-primary-container: var(--adaptive-light-primary-container, 204 230 255);
+        --color-app-primary-container-text: var(--adaptive-light-primary-container-text, 0 70 116);
+        --color-app-on-surface-variant: var(--adaptive-light-on-surface-variant, 68 70 78);
+        --color-app-outline: var(--adaptive-light-outline, 188 190 198);
+        --color-app-outline-variant: var(--adaptive-light-outline-variant, 228 230 236);
+        --color-app-inverse-surface: var(--adaptive-light-inverse-surface, 48 48 54);
+        --color-app-inverse-text: var(--adaptive-light-inverse-text, 236 236 242);
+        --color-app-accent-success: var(--adaptive-light-accent-success, 0 128 64);
+        --color-app-accent-warning: var(--adaptive-light-accent-warning, 146 92 0);
+        --color-app-accent-error: var(--adaptive-light-accent-error, 186 26 26);
+        --color-app-warning-container: 255 243 194;
+        --color-app-warning-container-text: 120 79 0;
+    }
+
+    .dark.theme-adaptive {
+        --color-app-bg: var(--adaptive-dark-bg, 16 18 22);
+        --color-app-surface: var(--adaptive-dark-surface, 28 30 36);
+        --color-app-surface-variant: var(--adaptive-dark-surface-variant, 56 58 66);
+        --color-app-text-main: var(--adaptive-dark-text-main, 228 228 236);
+        --color-app-text-muted: var(--adaptive-dark-text-muted, 160 162 174);
+        --color-app-border: var(--adaptive-dark-border, 60 62 70);
+        --color-app-primary: var(--adaptive-dark-primary, 140 198 255);
+        --color-app-primary-hover: var(--adaptive-dark-primary-hover, 170 210 255);
+        --color-app-primary-fg: var(--adaptive-dark-primary-fg, 0 50 86);
+        --color-app-primary-container: var(--adaptive-dark-primary-container, 0 74 122);
+        --color-app-primary-container-text: var(--adaptive-dark-primary-container-text, 204 230 255);
+        --color-app-on-surface-variant: var(--adaptive-dark-on-surface-variant, 188 190 198);
+        --color-app-outline: var(--adaptive-dark-outline, 128 130 138);
+        --color-app-outline-variant: var(--adaptive-dark-outline-variant, 56 58 66);
+        --color-app-inverse-surface: var(--adaptive-dark-inverse-surface, 228 228 236);
+        --color-app-inverse-text: var(--adaptive-dark-inverse-text, 48 48 54);
+        --color-app-accent-success: var(--adaptive-dark-accent-success, 100 200 140);
+        --color-app-accent-warning: var(--adaptive-dark-accent-warning, 245 190 70);
+        --color-app-accent-error: var(--adaptive-dark-accent-error, 255 140 140);
+        --color-app-warning-container: 75 55 10;
+        --color-app-warning-container-text: 255 226 150;
+    }
+}
+
+@layer components {
+    /* `md-card-filled` opts into a flat surface and only elevates on hover, so the
+       resting state needs a real rule: an undefined `md-elevation-0` utility
+       silently does nothing. */
+    .md-elevation-0 {
+        box-shadow: none;
+    }
+
+    .md-elevation-1 {
+        box-shadow:
+            0 1px 3px 1px rgba(var(--color-app-scrim) / 0.15),
+            0 1px 2px rgba(var(--color-app-scrim) / 0.3);
+    }
+
+    .md-elevation-2 {
+        box-shadow:
+            0 2px 6px 2px rgba(var(--color-app-scrim) / 0.15),
+            0 1px 2px rgba(var(--color-app-scrim) / 0.3);
+    }
+
+    .md-elevation-3 {
+        box-shadow:
+            0 4px 8px 3px rgba(var(--color-app-scrim) / 0.15),
+            0 1px 3px rgba(var(--color-app-scrim) / 0.3);
+    }
+
+    .md-ripple {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .md-ripple::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: currentColor;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .md-ripple:hover::after {
+        opacity: 0.08;
+    }
+
+    .md-ripple:active::after {
+        opacity: 0.12;
+    }
+
+    .md-filled-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 font-medium text-sm transition-all md-ripple;
+        @apply bg-app-primary text-app-primary-fg hover:bg-app-primary-hover;
+    }
+
+    .md-outlined-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 font-medium text-sm transition-all md-ripple;
+        @apply border border-app-outline text-app-primary hover:bg-app-primary/8;
+    }
+
+    .md-text-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-full px-3 py-2.5 font-medium text-sm transition-all md-ripple;
+        @apply text-app-primary hover:bg-app-primary/8;
+    }
+
+    .md-card {
+        @apply rounded-2xl border transition-shadow;
+        @apply bg-app-surface border-app-outline-variant md-elevation-1 hover:md-elevation-2;
+    }
+
+    .md-card-filled {
+        @apply rounded-2xl transition-shadow;
+        @apply bg-app-surface-variant md-elevation-0 hover:md-elevation-1;
+    }
+
+    .md-input {
+        @apply w-full rounded-lg border border-app-outline bg-transparent px-4 py-3 text-sm text-app-text-main;
+        @apply focus:border-app-primary focus:ring-1 focus:ring-app-primary focus:outline-none;
+        @apply placeholder:text-app-text-muted/50;
+    }
+
+    .md-chip {
+        @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all;
+        @apply bg-app-surface-variant text-app-on-surface-variant border border-app-outline-variant;
+    }
+
+    .md-chip-active {
+        @apply bg-app-primary-container text-app-primary-container-text border-transparent;
+    }
+
+    .md-divider {
+        @apply h-px bg-app-outline-variant;
+    }
+
+    .md-badge {
+        @apply inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold;
+        @apply bg-app-primary-container text-app-primary-container-text;
+    }
+}
+
+.bg-app-warning-container {
+    background-color: rgb(var(--color-app-warning-container));
+}
+
+.text-app-warning-container-text {
+    color: rgb(var(--color-app-warning-container-text));
+}
+
+.border-app-warning-container {
+    border-color: rgb(var(--color-app-warning-container));
+}
+
+.toast-success {
+    background-color: rgb(240 253 244 / 0.98);
+    border-color: rgb(187 247 208);
+}
+
+.toast-success-text,
+.toast-success-icon {
+    color: rgb(22 101 52);
+}
+
+.toast-error {
+    background-color: rgb(254 242 242 / 0.98);
+    border-color: rgb(254 202 202);
+}
+
+.toast-error-text,
+.toast-error-icon {
+    color: rgb(153 27 27);
+}
+
+.toast-warning {
+    background-color: rgb(255 251 235 / 0.98);
+    border-color: rgb(253 230 138);
+}
+
+.toast-warning-text,
+.toast-warning-icon {
+    color: rgb(120 79 0);
+}
+
+.toast-info {
+    background-color: rgb(239 246 255 / 0.98);
+    border-color: rgb(191 219 254);
+}
+
+.toast-info-text,
+.toast-info-icon {
+    color: rgb(30 64 175);
+}
+
+.dark .toast-success {
+    background-color: rgb(20 55 38 / 0.98);
+    border-color: rgb(22 101 52);
+}
+
+.dark .toast-success-text,
+.dark .toast-success-icon {
+    color: rgb(187 247 208);
+}
+
+.dark .toast-error {
+    background-color: rgb(69 26 30 / 0.98);
+    border-color: rgb(153 27 27);
+}
+
+.dark .toast-error-text,
+.dark .toast-error-icon {
+    color: rgb(254 202 202);
+}
+
+.dark .toast-warning {
+    background-color: rgb(69 49 12 / 0.98);
+    border-color: rgb(146 92 0);
+}
+
+.dark .toast-warning-text,
+.dark .toast-warning-icon {
+    color: rgb(255 226 150);
+}
+
+.dark .toast-info {
+    background-color: rgb(20 39 70 / 0.98);
+    border-color: rgb(30 64 175);
+}
+
+.dark .toast-info-text,
+.dark .toast-info-icon {
+    color: rgb(191 219 254);
+}
+
+.toast-progress-success {
+    background-color: rgb(22 163 74);
+}
+
+.toast-progress-error {
+    background-color: rgb(220 38 38);
+}
+
+.toast-progress-warning {
+    background-color: rgb(202 138 4);
+}
+
+.toast-progress-info {
+    background-color: rgb(37 99 235);
+}
+
+.bottom-navigation {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.pb-page-navigation {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+html {
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+html,
+body {
+    @apply bg-app-bg text-app-text-main;
+}
+
+body {
+    font-family: "Roboto", "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-app-outline) / 0.4);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--color-app-outline) / 0.6);
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}

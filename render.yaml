@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: daily-study-tracker
+    runtime: static
+    buildCommand: bun install --frozen-lockfile && bun run build
+    staticPublishPath: ./dist
+    previews:
+      generation: automatic
+    envVars:
+      - key: BUN_VERSION
+        value: 1.4.0
+    buildFilter:
+      paths:
+        - package.json
+        - bun.lock
+        - index.html
+        - vite.config.ts
+        - vitest.config.ts
+        - tailwind.config.ts
+        - postcss.config.js
+        - tsconfig.json
+        - tsconfig.node.json
+        - src/**
+        - public/**
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.github.com; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'"
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      # Render only serves the site over TLS and redirects plain HTTP, so there is
+      # nothing left for a network attacker to downgrade. No `preload`: that is an
+      # opt-in that cannot be withdrawn, and it is not needed here.
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), geolocation=(), microphone=()
+      - path: /sw.js
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /registerSW.js
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate

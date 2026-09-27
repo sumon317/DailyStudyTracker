@@ -1,10 +1,12 @@
 # Dependencies
 node_modules/
+.bun/
 
 # Build outputs
 dist/
 build/
-build_output.txt
+coverage/
+/release/
 
 # Capacitor Android build artifacts
 android/app/build/
@@ -16,9 +18,12 @@ android/.idea/
 *.aab
 
 # Local environment files
+# Every .env* form is ignored, not just the `.local` suffixed ones, so a
+# `.env.production` holding a secret cannot be committed by accident. No
+# VITE_* value belongs in this repository at all: Vite inlines them into the
+# browser bundle.
 .env
-.env.local
-.env.*.local
+.env.*
 android/local.properties
 
 # IDE
@@ -34,27 +39,22 @@ android/local.properties
 Thumbs.db
 ehthumbs.db
 
-# Debug & log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Debug and log files
+bun-debug.log*
+bun-error.log*
 *.log
 
-# Test coverage
-coverage/
-
-# Lock files (using bun)
-package-lock.json
-
-# Temp / test files
-test_collision.js
-
-# Misc
+# Temporary files
 .cache/
-.parcel-cache/
 *.tsbuildinfo
 
-# Security - Release Keys (Do NOT commit these)
+# Security and release keys
 *.jks
 *.keystore
 key_base64.txt
+
+# Android lint output
+android/app/reports/
+android/app/lint-results*.txt
+android/app/lint-results*.html
+android/app/lint-results*.xml

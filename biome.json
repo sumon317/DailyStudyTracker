@@ -1,88 +1,126 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
-    "vcs": {
-        "enabled": true,
-        "clientKind": "git",
-        "useIgnoreFile": true
-    },
-    "formatter": {
-        "enabled": true,
-        "indentStyle": "space",
-        "indentWidth": 4,
-        "lineWidth": 120
-    },
-    "linter": {
-        "enabled": true,
-        "rules": {
-            "recommended": true,
-            "correctness": {
-                "noUnusedVariables": "error",
-                "noUnusedImports": "error",
-                "useExhaustiveDependencies": "error",
-                "noUnusedPrivateClassMembers": "error",
-                "noUnreachable": "error"
-            },
-            "suspicious": {
-                "noEmptyBlockStatements": "error",
-                "noConsole": "warn",
-                "noExplicitAny": "warn",
-                "noDuplicateCase": "error",
-                "noDuplicateClassMembers": "error",
-                "noDuplicateObjectKeys": "error",
-                "noDuplicateParameters": "error",
-                "noRedeclare": "error",
-                "noUnsafeNegation": "error"
-            },
-            "style": {
-                "useConst": "error",
-                "noNonNullAssertion": "warn",
-                "noInferrableTypes": "error",
-                "useBlockStatements": "error",
-                "useForOf": "error",
-                "useNumberNamespace": "error"
-            },
-            "complexity": {
-                "noUselessCatch": "error",
-                "noUselessConstructor": "error",
-                "noUselessFragments": "error",
-                "noUselessTypeConstraint": "error",
-                "useArrowFunction": "error"
-            },
-            "security": {
-                "noDangerouslySetInnerHtml": "error"
-            },
-            "performance": {
-                "noDelete": "error",
-                "noAccumulatingSpread": "error"
-            },
-            "a11y": {
-                "noAriaUnsupportedElements": "error",
-                "noAutofocus": "error",
-                "noPositiveTabindex": "error",
-                "useAltText": "error",
-                "useAnchorContent": "error",
-                "useAriaPropsForRole": "error",
-                "useButtonType": "error",
-                "useHtmlLang": "error",
-                "useIframeTitle": "error",
-                "useKeyWithClickEvents": "error",
-                "useKeyWithMouseEvents": "error",
-                "useMediaCaption": "error",
-                "useValidAnchor": "error",
-                "useValidLang": "error"
-            }
-        }
-    },
-    "javascript": {
-        "formatter": {
-            "quoteStyle": "single",
-            "semicolons": "always",
-            "trailingCommas": "all",
-            "arrowParentheses": "always"
-        },
-        "jsxRuntime": "transparent"
-    },
-    "files": {
-        "includes": ["src/**/*.{js,jsx,ts,tsx}", "*.js"]
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 4,
+    "lineWidth": 120
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "useExhaustiveDependencies": "error",
+        "noUnusedPrivateClassMembers": "error",
+        "noUnreachable": "error"
+      },
+      "suspicious": {
+        "noEmptyBlockStatements": "error",
+        "noConsole": "warn",
+        "noExplicitAny": "warn",
+        "noDuplicateCase": "error",
+        "noDuplicateClassMembers": "error",
+        "noDuplicateObjectKeys": "error",
+        "noDuplicateParameters": "error",
+        "noRedeclare": "error",
+        "noUnsafeNegation": "error"
+      },
+      "style": {
+        "useConst": "error",
+        "noNonNullAssertion": "warn",
+        "noInferrableTypes": "error",
+        "useBlockStatements": "error",
+        "useForOf": "error",
+        "useNumberNamespace": "error"
+      },
+      "complexity": {
+        "noUselessCatch": "error",
+        "noUselessConstructor": "error",
+        "noUselessFragments": "error",
+        "noUselessTypeConstraint": "error",
+        "useArrowFunction": "error"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "error"
+      },
+      "performance": {
+        "noDelete": "error",
+        "noAccumulatingSpread": "error"
+      },
+      "a11y": {
+        "noAriaUnsupportedElements": "error",
+        "noAutofocus": "error",
+        "noPositiveTabindex": "error",
+        "useAltText": "error",
+        "useAnchorContent": "error",
+        "useAriaPropsForRole": "error",
+        "useButtonType": "error",
+        "useHtmlLang": "error",
+        "useIframeTitle": "error",
+        "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error",
+        "useMediaCaption": "error",
+        "useValidAnchor": "error",
+        "useValidLang": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    },
+    "jsxRuntime": "transparent"
+  },
+  "json": {
+    "formatter": {
+      "indentWidth": 2
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/app/index.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          },
+          "suspicious": {
+            "noUnknownAtRules": "off"
+          }
+        }
+      }
+    }
+  ],
+  "files": {
+    "includes": [
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.json",
+      "**/*.jsonc",
+      "**/*.css",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/coverage",
+      "!android",
+      "!.opencode"
+    ]
+  }
 }
