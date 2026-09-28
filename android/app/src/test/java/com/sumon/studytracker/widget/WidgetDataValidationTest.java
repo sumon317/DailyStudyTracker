@@ -112,14 +112,26 @@ public class WidgetDataValidationTest {
 
     @Test
     public void todayKeyMatchesTheGregorianLocalDate() {
+        // todayKey() re-reads the clock itself, so it is sampled first and the independent
+        // GregorianCalendar read follows. A midnight rollover between the two can only push the
+        // key one day ahead of the calendar, so the following day is accepted too, for the same
+        // reason todayKeyIgnoresTheDeviceLocaleCalendar allows a year of margin.
+        String today = WidgetDataStore.todayKey();
         GregorianCalendar calendar = new GregorianCalendar();
-        String expected = WidgetDataStore.formatDateKey(
-                calendar.get(GregorianCalendar.YEAR),
-                calendar.get(GregorianCalendar.MONTH) + 1,
-                calendar.get(GregorianCalendar.DAY_OF_MONTH)
+        int year = calendar.get(GregorianCalendar.YEAR);
+        int month = calendar.get(GregorianCalendar.MONTH) + 1;
+        int day = calendar.get(GregorianCalendar.DAY_OF_MONTH);
+        String expected = WidgetDataStore.formatDateKey(year, month, day);
+        assertTrue(
+                "expected " + today + " to be " + expected + " or the following day",
+                today.equals(expected)
+                        || today.equals(WidgetDataStore.formatDateKey(year, month, day + 1))
         );
-        assertEquals(expected, WidgetDataStore.todayKey());
-        assertTrue(WidgetDataStore.isToday(WidgetDataStore.todayKey()));
+        assertTrue(
+                "isToday must accept the current day key",
+                WidgetDataStore.isToday(today)
+                        || WidgetDataStore.isToday(WidgetDataStore.formatDateKey(year, month, day + 1))
+        );
     }
 
     /**

@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
@@ -217,7 +218,7 @@ public class AlarmActivity extends Activity {
             return;
         }
         ViewCompat.setOnApplyWindowInsetsListener(content,
-                new ViewCompat.OnApplyWindowInsetsListener() {
+                new OnApplyWindowInsetsListener() {
                     @Override
                     public WindowInsetsCompat onApplyWindowInsets(
                             View view,

@@ -69,7 +69,6 @@ public class BootReceiverTest {
         for (String action : new String[]{
                 BOOT_COMPLETED,
                 MY_PACKAGE_REPLACED,
-                "android.intent.action.BOOT_COMPLETED",
                 "android.intent.action.LOCKED_BOOT_COMPLETED",
                 "android.intent.action.USER_PRESENT",
                 "android.intent.action.TIME_SET",

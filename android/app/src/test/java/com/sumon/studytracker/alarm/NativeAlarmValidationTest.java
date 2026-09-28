@@ -69,7 +69,7 @@ public class NativeAlarmValidationTest {
         assertNull(NativeAlarmPlugin.exactLong(null));
         assertNull(NativeAlarmPlugin.exactLong("1"));
         assertNull(NativeAlarmPlugin.exactLong(Boolean.TRUE));
-        assertNull(NativeAlarmPlugin.exactLong(Double.valueOf(Double.NaNd)));
+        assertNull(NativeAlarmPlugin.exactLong(Double.valueOf(Double.NaN)));
     }
 
     @Test

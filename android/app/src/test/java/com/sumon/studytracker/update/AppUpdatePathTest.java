@@ -335,7 +335,7 @@ public class AppUpdatePathTest {
     }
 
     @Test
-    public void aNonEmptyNonApkFileStillPassesThePathPolicy() {
+    public void aNonEmptyNonApkFileStillPassesThePathPolicy() throws Exception {
         // The path policy has nothing to say about the file's contents: a 64-byte file in the
         // cache is a legitimate resolve. Rejecting it here would be wrong, and the archive
         // validation that follows is what distinguishes it. This documents the boundary between
