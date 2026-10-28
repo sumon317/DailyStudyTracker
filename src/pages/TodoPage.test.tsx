@@ -371,6 +371,17 @@ describe('TodoPage', () => {
         await waitFor(() => expect(snapshots).toHaveLength(1));
     });
 
+    it('keeps a completed todo delete control visible on touch screens', () => {
+        renderPage([todo({ completed: true })]);
+
+        const button = screen.getByRole('button', { name: /delete task revise accounts/i });
+        // Hover-only controls are unreachable on touch, where a completed row
+        // used to hide its only delete affordance. It can still fade out from
+        // `sm` upward, where a mouse can reveal it.
+        expect(button).toHaveClass('opacity-100');
+        expect(button).not.toHaveClass('opacity-0');
+    });
+
     it('names its form field and its row controls for assistive technology', () => {
         renderPage([todo()]);
         expect(screen.getByLabelText('New task')).toBeInTheDocument();

@@ -127,6 +127,41 @@ describe('widgetBridge', () => {
             expect(JSON.parse(payload.data)).toHaveLength(1);
         });
 
+        it('keeps a malformed time rather than hiding the subject', async () => {
+            // A corrupt stored time must not make the row disappear from the
+            // widget: it cannot be compared with the clock, so the safe answer is
+            // to keep showing it.
+            const subjects = [
+                { id: 1, name: 'Bad', planned: '30', actual: '0', kpi: 'N', time: '9:5', reminder: false },
+                { id: 2, name: 'Impossible', planned: '30', actual: '0', kpi: 'N', time: '24:00', reminder: false },
+            ];
+
+            await updateWidget(subjects as never);
+
+            const payload = updateData.mock.calls[0]?.[0] as { data: string };
+            expect((JSON.parse(payload.data) as Array<{ name: string }>).map((entry) => entry.name)).toEqual([
+                'Bad',
+                'Impossible',
+            ]);
+        });
+
+        it('orders timed subjects by start time and leaves untimed ones last', async () => {
+            const subjects = [
+                { id: 3, name: 'Evening', planned: '30', actual: '0', kpi: 'N', time: '18:00', reminder: false },
+                { id: 2, name: 'Untimed', planned: '30', actual: '0', kpi: 'N', time: '', reminder: false },
+                { id: 1, name: 'Morning', planned: '30', actual: '0', kpi: 'N', time: '08:00', reminder: false },
+            ];
+
+            await updateWidget(subjects as never);
+
+            const payload = updateData.mock.calls[0]?.[0] as { data: string };
+            expect((JSON.parse(payload.data) as Array<{ name: string }>).map((entry) => entry.name)).toEqual([
+                'Morning',
+                'Evening',
+                'Untimed',
+            ]);
+        });
+
         it('swallows plugin failures', async () => {
             updateData.mockRejectedValueOnce(new Error('bridge down'));
             await expect(updateWidget([])).resolves.toBeUndefined();

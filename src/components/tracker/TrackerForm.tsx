@@ -101,6 +101,16 @@ const minutesOf = (value: string): number => {
     return Number.isFinite(minutes) ? minutes : 0;
 };
 
+/**
+ * Whether a subject id can address a reminder.
+ *
+ * Zero is a valid id: storage accepts every safe integer from zero upwards, so
+ * a backup can legitimately hand the planner a subject with id 0. The reminder
+ * service hashes the id for the platform, which makes 0 just another value.
+ * Only a missing or out-of-range id is unusable.
+ */
+const isUsableSubjectId = (id: number): boolean => Number.isSafeInteger(id) && id >= 0;
+
 const isKpiMet = (subject: Subject): boolean => {
     const planned = minutesOf(subject.planned);
     return planned > 0 && minutesOf(subject.actual) >= 0.8 * planned;
@@ -462,7 +472,7 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
             if (!subject) {
                 return;
             }
-            if (subject.reminder && subject.id && !(await cancelSubjectReminder(subject.id))) {
+            if (subject.reminder && isUsableSubjectId(subject.id) && !(await cancelSubjectReminder(subject.id))) {
                 showToast({ type: 'warning', message: 'The reminder could not be cancelled on the device.' });
             }
 
@@ -476,11 +486,17 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
 
     const handleTimeChange = useCallback(
         async (subject: Subject, newTime: string) => {
+            // Confirming the time that is already stored is not an edit. Treating
+            // it as one cancelled the armed alarm and silently switched the
+            // reminder off while the control still looked armed.
+            if (newTime === subject.time) {
+                return;
+            }
             if (subject.reminder) {
                 // The pending alarm is keyed to the old time, so it has to be
                 // cancelled first; if it cannot be, the field keeps its value
                 // rather than stranding an alarm at a time nobody can see.
-                if (!subject.id || !(await cancelSubjectReminder(subject.id))) {
+                if (!isUsableSubjectId(subject.id) || !(await cancelSubjectReminder(subject.id))) {
                     showToast({
                         type: 'error',
                         message: 'Unable to cancel the reminder, so the time was not changed.',
@@ -501,7 +517,7 @@ const TrackerForm = memo(({ subjects, setSubjects }: TrackerFormProps) => {
                 return;
             }
 
-            if (!subject.id) {
+            if (!isUsableSubjectId(subject.id)) {
                 showToast({
                     type: 'error',
                     message: 'Please reset your subjects to enable reminders (missing ID).',

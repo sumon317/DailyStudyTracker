@@ -639,7 +639,9 @@ describe('DataProvider', () => {
                 ]);
             });
             await act(async () => {
-                await result.current.saveData();
+                // Reporting success here would tell the user the edit was saved
+                // when it deliberately was not.
+                await expect(result.current.saveData()).rejects.toThrow('Progress could not be saved');
             });
             expect(mockSaveToNativeStorage).not.toHaveBeenCalled();
             // The store never received those rows, so the widget must not show them either.
@@ -1663,6 +1665,44 @@ describe('DataProvider', () => {
             expect(result.current.loadedDate).toBeNull();
             expect(result.current.date).toBe(getTodayLocalDate());
         });
+        it('does not save a default payload over a day whose startup read failed', async () => {
+            mockLoadFromNativeStorage.mockRejectedValue(new Error('Store unavailable'));
+            const { result } = await renderDataProvider();
+            await waitFor(() => expect(result.current.isInitialized).toBe(true));
+            mockSaveToNativeStorage.mockClear();
+            act(() => {
+                result.current.setSubjects([makeSubject({ name: 'Edit on unread day' })]);
+            });
+            // The default rows were never shown to be the stored day, so writing
+            // them would replace a record the provider could not read.
+            await act(async () => {
+                await expect(result.current.saveData()).rejects.toThrow('Progress could not be saved');
+            });
+            expect(mockSaveToNativeStorage).not.toHaveBeenCalled();
+        });
+        it('still saves an edit typed before a failing startup read resolves', async () => {
+            const storedDay = deferred<DayData | null>();
+            mockLoadFromNativeStorage.mockImplementation(() => storedDay.promise);
+            const { result } = renderDataProviderWithPendingStartup();
+            act(() => {
+                result.current.setSubjects([makeSubject({ name: 'Typed before the failure' })]);
+            });
+            storedDay.reject(new Error('Store unavailable'));
+            await waitFor(() => expect(result.current.isInitialized).toBe(true));
+            await act(async () => {
+                await result.current.saveData();
+            });
+            // An edit made while the read was in flight already outranks the
+            // stored record; the failed read must not take that decision back.
+            expect(mockSaveToNativeStorage).toHaveBeenCalledWith(
+                getTodayLocalDate(),
+                expect.objectContaining({
+                    subjects: expect.arrayContaining([
+                        expect.objectContaining({ name: 'Typed before the failure' }),
+                    ]),
+                }),
+            );
+        });
     });
     describe('import reload', () => {
         it('reloads the imported day and todo list', async () => {
@@ -1784,6 +1824,67 @@ describe('DataProvider', () => {
             expect(appliedDays).toBe(1);
             expect(result.current.todos.map((todo) => todo.text)).toEqual(['Typed during reload']);
             expect(result.current.hasUnsavedChanges).toBe(true);
+        });
+        it('keeps a day edit made during an import instead of replacing it with the imported copy', async () => {
+            const importing = deferred<number>();
+            mockHandleFileImport.mockImplementationOnce(() => importing.promise);
+            mockLoadFromNativeStorage.mockResolvedValue(makeDay(getTodayLocalDate(), 'Imported subject'));
+            const { result } = await renderDataProvider();
+            await waitFor(() => expect(result.current.isInitialized).toBe(true));
+            let applied: Promise<number> = Promise.resolve(0);
+            await act(async () => {
+                applied = result.current.importData(
+                    new File(['{}'], 'backup.json', {
+                        type: 'application/json',
+                    }),
+                );
+                await Promise.resolve();
+            });
+            act(() => {
+                result.current.setSubjects([makeSubject({ name: 'Typed during import' })]);
+            });
+            importing.resolve(1);
+            let appliedDays = 0;
+            await act(async () => {
+                appliedDays = await applied;
+            });
+            // The import has already written the store, but the edit that landed
+            // while it was running is the newer intent and must not vanish. It
+            // stays dirty so the next save wins over the imported copy.
+            expect(appliedDays).toBe(1);
+            expect(result.current.subjects[0]?.name).toBe('Typed during import');
+            expect(result.current.hasUnsavedChanges).toBe(true);
+            expect(result.current.loadedDate).toBe(getTodayLocalDate());
+        });
+        it('does not let a failed post-import reload make the stale payload writable', async () => {
+            const today = getTodayLocalDate();
+            let imported = false;
+            mockHandleFileImport.mockResolvedValueOnce(1);
+            mockLoadFromNativeStorage.mockImplementation(async (targetDate: string) => {
+                if (imported && targetDate === today) {
+                    throw new Error('Store unavailable');
+                }
+                return targetDate === today ? makeDay(today, 'Pre-import subject') : null;
+            });
+            const { result } = await renderDataProvider();
+            await waitFor(() => expect(result.current.isInitialized).toBe(true));
+            imported = true;
+            await act(async () => {
+                await expect(
+                    result.current.importData(new File(['{}'], 'backup.json', { type: 'application/json' })),
+                ).rejects.toThrow('Store unavailable');
+            });
+            mockSaveToNativeStorage.mockClear();
+            act(() => {
+                result.current.setSubjects([makeSubject({ name: 'Edit on stale payload' })]);
+            });
+            // The screen still shows the pre-import day, but the store holds the
+            // restored one. Saving the stale rows would overwrite it, so the save
+            // is refused instead of silently succeeding.
+            await act(async () => {
+                await expect(result.current.saveData()).rejects.toThrow('Progress could not be saved');
+            });
+            expect(mockSaveToNativeStorage).not.toHaveBeenCalled();
         });
         it('announces the completed restore so the component-owned mirrors re-read', async () => {
             // The theme and the focus alarm list are owned by other trees that

@@ -560,7 +560,7 @@ export default function DataProvider({ children }: DataProviderProps) {
         let joins = 0;
         while (passes < MAX_FLUSH_PASSES && joins < MAX_FLUSH_JOINS) {
             if (!hasFlushableWrites()) {
-                return;
+                break;
             }
             const active = flushRecordRef.current;
             if (active) {
@@ -577,10 +577,14 @@ export default function DataProvider({ children }: DataProviderProps) {
             passes += 1;
             await writePendingData();
         }
-        if (hasFlushableWrites()) {
+        // Two different failures end up here. A write may still be pending after
+        // the pass/join budget, or it may be unflushable because the payload no
+        // longer describes the selected day. Reporting either as a completed save
+        // told the user their edit had landed when nothing was written.
+        if (hasUnsavedWrites()) {
             throw new Error(UNSAVED_ERROR);
         }
-    }, [hasFlushableWrites, writePendingData]);
+    }, [hasFlushableWrites, hasUnsavedWrites, writePendingData]);
 
     const scheduleAutosave = useCallback(() => {
         if (debounceTimerRef.current !== null) {
@@ -732,13 +736,27 @@ export default function DataProvider({ children }: DataProviderProps) {
                     if (mountedRef.current) {
                         reportPersistenceError(error);
                     }
+                    // Nothing was read, so the default payload cannot be assumed
+                    // to describe the stored day. Leaving it writable let the
+                    // first edit save the placeholder over a record the provider
+                    // never managed to read. An edit typed during the read still
+                    // wins, exactly as it did when the read was refused.
+                    if (!hasUnsavedWrites()) {
+                        payloadDateRef.current = '';
+                    }
                 }
 
                 markInitialized();
             })();
         }
         void initializationPromiseRef.current;
-    }, [loadDataForDateInternal, markInitialized, reportPersistenceError, syncDirtyState]);
+    }, [
+        hasUnsavedWrites,
+        loadDataForDateInternal,
+        markInitialized,
+        reportPersistenceError,
+        syncDirtyState,
+    ]);
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -900,10 +918,24 @@ export default function DataProvider({ children }: DataProviderProps) {
             // that no longer matches the store.
             setLoadedDate(null);
             try {
-                await loadDataForDateInternal(currentDate, false);
+                // Preserve edits typed while the file was being applied. The import starts with
+                // a drain, so anything that is dirty now arrived during the restore; replacing
+                // it with the imported copy discarded work the user had just entered. The
+                // imported day is still in the store, and the pending edit wins on its next save,
+                // exactly as a todo edit made during the same window does.
+                await loadDataForDateInternal(currentDate, true);
+                if (loadedDateRef.current !== currentDate && dayDirtyRef.current) {
+                    // The load declined to replace the edited payload. It still describes the
+                    // selected day, so it is coherent for notification purposes even though the
+                    // store now holds the imported copy.
+                    setLoadedDate(currentDate);
+                }
             } catch (error) {
                 // Nothing was adopted, so the startup read is no longer competing with an import
-                // and is free to load a coherent day itself.
+                // and is free to load a coherent day itself. The payload is the pre-import one;
+                // it must not become writable against the restored store, or the next edit
+                // would save stale rows over the day the import just wrote.
+                payloadDateRef.current = '';
                 explicitLoadRequestedRef.current = false;
                 throw error;
             }

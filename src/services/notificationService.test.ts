@@ -436,6 +436,9 @@ describe('NotificationService', () => {
             await expect(NotificationService.initialize()).rejects.toThrow(
                 'Unable to prepare notifications on this device',
             );
+            // The action types do not depend on the channel, and skipping them
+            // would leave the notification's buttons dead.
+            expect(mocks.notifications.registerActionTypes).toHaveBeenCalledTimes(1);
         });
 
         it('surfaces an action-type failure, which is not the channel talking', async () => {
@@ -474,6 +477,42 @@ describe('NotificationService', () => {
             expect(() => getNextDailyReminderDate(24, 0)).toThrow(RangeError);
             expect(() => getNextDailyReminderDate(0, 60)).toThrow(RangeError);
             expect(() => getNextDailyReminderDate(11.5, 0)).toThrow(RangeError);
+        });
+
+        it('keeps the requested wall clock after a spring-forward gap', async () => {
+            // 02:30 does not exist on the spring-forward day, so the first
+            // occurrence is normalized to 03:30. Every later day must return to
+            // 02:30 rather than inheriting the normalized hour forever.
+            const previousTZ = process.env.TZ;
+            process.env.TZ = 'America/New_York';
+            try {
+                vi.useFakeTimers();
+                vi.setSystemTime(new Date(2026, 2, 7, 10, 0, 0));
+                const { instances } = installMockNotification();
+
+                await NotificationService.scheduleDailyNotification(3, 'Daily', 'Body', 2, 30);
+
+                // The gap day fires at 03:30 EDT, 16.5 real hours later.
+                await vi.advanceTimersByTimeAsync(16.5 * 60 * 60 * 1000);
+                expect(instances).toHaveLength(1);
+                expect(new Date().getHours()).toBe(3);
+
+                // The following day is back at 02:30, one hour earlier by the
+                // clock than the previous firing, and 23 hours later in real
+                // time. Reading the hour off the normalized target would keep
+                // firing at 03:30.
+                await vi.advanceTimersByTimeAsync(23 * 60 * 60 * 1000);
+                expect(instances).toHaveLength(2);
+                expect(new Date().getHours()).toBe(2);
+                expect(new Date().getMinutes()).toBe(30);
+                expect(instances.map((instance) => instance.title)).toEqual(['Daily', 'Daily']);
+            } finally {
+                if (previousTZ === undefined) {
+                    delete process.env.TZ;
+                } else {
+                    process.env.TZ = previousTZ;
+                }
+            }
         });
     });
 
@@ -635,6 +674,31 @@ describe('NotificationService', () => {
 
             expect(focus).toHaveBeenCalledTimes(1);
             expect(delivered?.close).toHaveBeenCalledTimes(1);
+            // Dismissing the banner must also dismiss the alarm. The looping
+            // tone used to keep playing until the page was reloaded.
+            expect(audioMocks.instances[0]?.dispose).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not let a click on an old occurrence silence the next day\'s alarm', async () => {
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date(2026, 11, 1, 10, 0, 0));
+            const { instances } = installMockNotification();
+
+            await NotificationService.scheduleTodoNotification(7, 'Todo', 'Body', 11, 0);
+            await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+            const first = instances[0];
+            await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+            expect(audioMocks.instances).toHaveLength(2);
+            expect(first).toBeDefined();
+
+            // Arming the second occurrence already disposed the first
+            // controller. The click must add exactly one more disposal for its
+            // own tone, and must not touch the controller that is ringing now.
+            const previousDisposals = audioMocks.instances[0]?.dispose.mock.calls.length ?? 0;
+            first?.onclick?.();
+
+            expect(audioMocks.instances[0]?.dispose).toHaveBeenCalledTimes(previousDisposals + 1);
+            expect(audioMocks.instances[1]?.dispose).not.toHaveBeenCalled();
         });
 
         it('stops the tone when the reminder it belongs to is cancelled', async () => {
@@ -1505,6 +1569,44 @@ describe('NotificationService', () => {
             expect(instances.map((instance) => instance.title)).toEqual(['New']);
         });
 
+        it('keeps a working subject reminder when its replacement has a corrupt date', async () => {
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date(2026, 11, 1, 10, 0, 0));
+            const { instances } = installMockNotification();
+
+            await NotificationService.scheduleSubjectNotification(3, 'Old', 'Body', new Date(2026, 11, 1, 12, 0));
+
+            // The definition still names the same entity, so the sweep must treat
+            // it as wanted even though this pass cannot parse its date. Dropping
+            // it here would leave the user with no reminder at all.
+            const result = await NotificationService.reconcileSubjectNotifications([
+                { id: 3, title: 'New', body: 'Body', date: 'not-a-date' },
+            ]);
+            expect(result.success).toBe(false);
+
+            await vi.advanceTimersByTimeAsync(2 * 60 * 60 * 1000);
+            expect(instances.map((instance) => instance.title)).toEqual(['Old']);
+        });
+
+        it('keeps a working todo reminder when its replacement has an impossible time', async () => {
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date(2026, 11, 1, 10, 0, 0));
+            const { instances } = installMockNotification();
+
+            await NotificationService.scheduleTodoNotification(7, 'Old', 'Body', 12, 0);
+
+            // Same contract as the subject pass: a bad definition fails its own
+            // result, but it does not take the working reminder it replaced down
+            // with it.
+            const result = await NotificationService.reconcileTodoNotifications([
+                { id: 7, title: 'New', body: 'Body', hour: 99, minute: 0 },
+            ]);
+            expect(result.success).toBe(false);
+
+            await vi.advanceTimersByTimeAsync(2 * 60 * 60 * 1000);
+            expect(instances.map((instance) => instance.title)).toEqual(['Old']);
+        });
+
         it('keeps a fired subject reminder closable when its date has passed', async () => {
             vi.useFakeTimers();
             vi.setSystemTime(new Date(2026, 11, 1, 10, 0, 0));
@@ -1660,8 +1762,53 @@ describe('NotificationService', () => {
             }
         });
 
-        it('registers nothing in a browser, where no notification goes through the plugin', async () => {
-            // The web path builds its own `Notification` objects, so neither
+        it('tears down the new handles when a teardown lands during old handle removal', async () => {
+            useAndroid();
+            const oldRemovals: Array<ReturnType<typeof vi.fn>> = [];
+            let releaseOldRemovals!: () => void;
+            const oldRemovalGate = new Promise<void>((resolve) => {
+                releaseOldRemovals = resolve;
+            });
+            const oldHandles = [0, 1].map(() => {
+                const remove = vi.fn(() => oldRemovalGate);
+                oldRemovals.push(remove);
+                return { remove };
+            });
+            const newHandles = [
+                { remove: vi.fn().mockResolvedValue(undefined) },
+                { remove: vi.fn().mockResolvedValue(undefined) },
+            ];
+            mocks.notifications.addListener
+                .mockResolvedValueOnce(oldHandles[0])
+                .mockResolvedValueOnce(oldHandles[1])
+                .mockResolvedValueOnce(newHandles[0])
+                .mockResolvedValueOnce(newHandles[1]);
+
+            await NotificationService.initListeners(vi.fn(), vi.fn());
+
+            const reinit = NotificationService.initListeners(vi.fn(), vi.fn());
+            // Both old handles are being removed and the re-init is parked on
+            // that `Promise.all`. Its new pair is already committed by design, so
+            // a teardown arriving now has to own and release it.
+            await vi.waitFor(() => {
+                expect(oldRemovals[0]).toHaveBeenCalledTimes(1);
+                expect(oldRemovals[1]).toHaveBeenCalledTimes(1);
+            });
+
+            await NotificationService.removeListeners();
+            for (const handle of newHandles) {
+                expect(handle.remove).toHaveBeenCalledTimes(1);
+            }
+
+            releaseOldRemovals();
+            await reinit;
+            // Resuming the re-init must not undo the teardown or double-remove.
+            for (const handle of newHandles) {
+                expect(handle.remove).toHaveBeenCalledTimes(1);
+            }
+        });
+
+        it('registers nothing in a browser, where no notification goes through the plugin', async () => {// The web path builds its own `Notification` objects, so neither
             // plugin event can ever describe one of them. Registering anyway
             // attached two listeners nothing in this service can reach.
             await expect(NotificationService.initListeners(vi.fn(), vi.fn())).resolves.toBeUndefined();

@@ -381,7 +381,7 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                             onClick={() => void deleteTodo(todo.id)}
                             disabled={pendingIds.includes(todo.id)}
                             aria-label={`Delete task ${todo.text}`}
-                            className="text-app-text-muted hover:text-app-accent-error p-2 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                            className="text-app-text-muted hover:text-app-accent-error p-2 rounded-lg opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
                             title="Delete"
                         >
                             <Trash2 size={16} aria-hidden="true" />

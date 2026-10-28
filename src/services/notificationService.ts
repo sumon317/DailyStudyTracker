@@ -496,6 +496,7 @@ const scheduleWebReminder = async (
     repeats: boolean,
     actionType: string,
     requestPermission: boolean,
+    repeatWallClock?: { hour: number; minute: number },
 ): Promise<SessionNotificationScheduleResult> => {
     if (!webNotificationApi()) {
         return { success: false, error: WEB_UNSUPPORTED_ERROR };
@@ -580,6 +581,10 @@ const scheduleWebReminder = async (
                  * what a `setTimeout` can promise - but a notification that *is*
                  * delivered can at least bring the page it came from forward.
                  */
+                // The controller is captured here rather than read off the entry
+                // at click time: a later occurrence replaces `entry.audio`, and
+                // clicking this banner must not silence the newer alarm.
+                let ownAudio: AlarmAudioController | null = null;
                 notification.onclick = () => {
                     try {
                         globalThis.focus?.();
@@ -588,6 +593,15 @@ const scheduleWebReminder = async (
                         // and throw instead of returning false.
                     }
                     notification.close();
+                    // Clicking is a dismissal, so the looping tone stops with the
+                    // banner. It used to keep playing until the page was reloaded.
+                    ownAudio?.dispose();
+                    if (entry.audio === ownAudio) {
+                        entry.audio = null;
+                    }
+                    if (entry.notification === notification) {
+                        entry.notification = null;
+                    }
                 };
                 entry.notification = notification;
                 /**
@@ -605,19 +619,30 @@ const scheduleWebReminder = async (
                  * silences the countdown timer through `isForeignAlarmActive`.
                  */
                 const audio = createAlarmAudio();
+                ownAudio = audio;
                 entry.audio?.dispose();
                 entry.audio = audio;
                 void audio.play();
             } catch {
+                // A banner that was constructed before the failure is still on
+                // screen; nulling the handle without closing it left no way to
+                // dismiss it from the service.
+                entry.notification?.close();
                 entry.notification = null;
             }
             if (repeats) {
                 const next = new Date(nextTarget);
-                // Step the wall clock rather than adding 24h, so the reminder keeps
-                // its time across a DST change, and skip any occurrence a suspended
-                // tab slept through instead of firing the whole backlog at once.
+                // Re-apply the *requested* wall-clock time after every step.
+                // Advancing the date alone lets a spring-forward day normalize
+                // 02:30 to 03:30, and reading the hour back off that normalized
+                // target would move every later occurrence to 03:30 as well.
+                // The loop also skips any occurrence a suspended tab slept
+                // through instead of firing the whole backlog at once.
+                const wallClockHour = repeatWallClock?.hour ?? nextTarget.getHours();
+                const wallClockMinute = repeatWallClock?.minute ?? nextTarget.getMinutes();
                 do {
                     next.setDate(next.getDate() + 1);
+                    next.setHours(wallClockHour, wallClockMinute, 0, 0);
                 } while (next.getTime() <= now);
                 scheduleNext(next);
             }
@@ -985,6 +1010,7 @@ export const NotificationService = {
         // entirely - leaving iOS with scheduled reminders and no
         // `localNotificationActionPerformed` listener, so a tap never marks a
         // todo done and never stops the alarm.
+        let channelFailure: unknown;
         if (isAndroid()) {
             try {
                 await LocalNotifications.createChannel({
@@ -997,10 +1023,11 @@ export const NotificationService = {
                     sound: NOTIFICATION_SOUND,
                 });
             } catch (error: unknown) {
-                // Without the channel the alarm is silent, and a swallowed failure
-                // here would only surface much later as an unexplained schedule
-                // error.
-                throw new Error(`${INIT_FAILED_ERROR}: ${errorMessage(error)}`);
+                // Recorded rather than thrown here: without the channel the alarm
+                // is silent, but the action types below are independent of it and
+                // must still be registered. The failure is re-raised once they
+                // have been.
+                channelFailure = error;
             }
         }
 
@@ -1022,6 +1049,10 @@ export const NotificationService = {
             });
         } catch (error: unknown) {
             throw new Error(`${ACTION_TYPES_FAILED_ERROR}: ${errorMessage(error)}`);
+        }
+
+        if (channelFailure !== undefined) {
+            throw new Error(`${INIT_FAILED_ERROR}: ${errorMessage(channelFailure)}`);
         }
     },
 
@@ -1137,8 +1168,13 @@ export const NotificationService = {
         // service's only reference to those registrations, and dropping them on
         // the floor leaves them alive for the life of the page.
         const superseded = notificationListenerHandles.splice(0, notificationListenerHandles.length);
-        await Promise.all(superseded.map((handle) => handle.remove().catch(() => undefined)));
+        // Commit synchronously, before awaiting the old handles. A teardown that
+        // arrives while those removals are in flight splices whatever the array
+        // holds; pushing afterwards left the new handles outside that sweep. The
+        // generation check above is synchronous with this push, so no teardown
+        // can slip between them.
         notificationListenerHandles.push(...created);
+        await Promise.all(superseded.map((handle) => handle.remove().catch(() => undefined)));
     },
 
     /**
@@ -1212,7 +1248,7 @@ export const NotificationService = {
             return { success: false, error: errorMessage(error) };
         }
         if (!Capacitor.isNativePlatform()) {
-            return scheduleWebReminder(type, originalId, title, body, target, true, actionType, true);
+            return scheduleWebReminder(type, originalId, title, body, target, true, actionType, true, { hour, minute });
         }
         return scheduleNativeNotification({ type, entityId: originalId, title, body, at: target, actionType });
     },
@@ -1352,14 +1388,16 @@ export const NotificationService = {
             const armed = new Set<string>();
             const results: SessionNotificationScheduleResult[] = [];
             for (const definition of definitions) {
+                // Kept even once the occurrence has passed, so a reminder that
+                // fired a moment ago keeps its handle and stays closable - and
+                // kept for a definition that cannot be parsed, so the sweep below
+                // does not take the working reminder it replaced with it.
+                armed.add(webReminderKey('subject', definition.id));
                 const target = definition.date instanceof Date ? definition.date : dateFromKey(definition.date);
                 if (Number.isNaN(target.getTime())) {
                     results.push({ success: false, error: INVALID_DATE_ERROR });
                     continue;
                 }
-                // Kept even once the occurrence has passed, so a reminder that
-                // fired a moment ago keeps its handle and stays closable.
-                armed.add(webReminderKey('subject', definition.id));
                 if (target.getTime() <= Date.now()) {
                     continue;
                 }
@@ -1426,6 +1464,10 @@ export const NotificationService = {
             const armed = new Set<string>();
             const results: SessionNotificationScheduleResult[] = [];
             for (const definition of definitions) {
+                // As in the subject pass: an unusable time fails this one
+                // reminder, but it does not delete the working reminder the
+                // definition was meant to replace.
+                armed.add(webReminderKey('todo', definition.id));
                 let target: Date;
                 try {
                     target = getNextDailyReminderDate(definition.hour, definition.minute);
@@ -1433,7 +1475,6 @@ export const NotificationService = {
                     results.push({ success: false, error: errorMessage(error) });
                     continue;
                 }
-                armed.add(webReminderKey('todo', definition.id));
                 results.push(
                     await scheduleWebReminder(
                         'todo',
@@ -1444,6 +1485,7 @@ export const NotificationService = {
                         true,
                         definition.actionType ?? 'TODO_ACTIONS',
                         false,
+                        { hour: definition.hour, minute: definition.minute },
                     ),
                 );
             }

@@ -115,5 +115,39 @@ describe('markdownGenerator', () => {
             writeFile.mockRejectedValueOnce(new Error('disk full'));
             await expect(generateMarkdown(makeData())).rejects.toThrow('disk full');
         });
+
+        it('downloads a blob and releases its URL in the browser', async () => {
+            const originalCreate = URL.createObjectURL;
+            const originalRevoke = URL.revokeObjectURL;
+            const createObjectURL = vi.fn(() => 'blob:study-tracker');
+            const revokeObjectURL = vi.fn();
+            let clicked: { download: string; href: string } | null = null;
+            const click = vi
+                .spyOn(HTMLAnchorElement.prototype, 'click')
+                .mockImplementation(function (this: HTMLAnchorElement) {
+                    clicked = { download: this.download, href: this.href };
+                });
+            Object.assign(URL, { createObjectURL, revokeObjectURL });
+
+            try {
+                await generateMarkdown(makeData());
+            } finally {
+                click.mockRestore();
+                if (originalCreate === undefined) {
+                    Reflect.deleteProperty(URL, 'createObjectURL');
+                } else {
+                    Object.assign(URL, { createObjectURL: originalCreate });
+                }
+                if (originalRevoke === undefined) {
+                    Reflect.deleteProperty(URL, 'revokeObjectURL');
+                } else {
+                    Object.assign(URL, { revokeObjectURL: originalRevoke });
+                }
+            }
+
+            expect(createObjectURL).toHaveBeenCalledTimes(1);
+            expect(clicked).toEqual({ download: 'Study_Tracker_2026-09-25.md', href: 'blob:study-tracker' });
+            expect(revokeObjectURL).toHaveBeenCalledWith('blob:study-tracker');
+        });
     });
 });

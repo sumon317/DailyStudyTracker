@@ -188,6 +188,17 @@ describe('TimePicker', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
+    it('hides the clear control when the time cannot be unset', async () => {
+        // A focus alarm without a time has nothing to ring, so it must not offer
+        // a way to erase the only value it needs.
+        const user = userEvent.setup();
+        render(<TimePicker value="09:30" onChange={vi.fn()} clearable={false} />);
+
+        const popover = await openPopover(user);
+        expect(within(popover).queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+        expect(within(popover).getByRole('button', { name: 'Set' })).toBeInTheDocument();
+    });
+
     it('restores focus to the trigger on Escape and discards uncommitted edits', async () => {
         const user = userEvent.setup();
         const onChange = vi.fn();

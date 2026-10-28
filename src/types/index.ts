@@ -374,6 +374,12 @@ export interface ThemeSelectorProps {
 export interface TimePickerProps {
     value: string;
     onChange: (newTime: string) => void;
+    /**
+     * Whether the picker offers a Clear control. A consumer whose value cannot
+     * be empty passes `false`; an inert button that silently does nothing is
+     * worse than no button at all.
+     */
+    clearable?: boolean;
 }
 
 export interface TrackerFormProps {

@@ -487,6 +487,9 @@ const InbuiltAlarm = (_props: InbuiltAlarmProps) => {
                                             <div className="flex items-center gap-4">
                                                 <TimePicker
                                                     value={alarm.time}
+                                                    // An alarm cannot exist without a time:
+                                                    // clearing would leave an inert row.
+                                                    clearable={false}
                                                     onChange={(newTime) => {
                                                         void updateAlarmTime(alarm.id, newTime);
                                                     }}

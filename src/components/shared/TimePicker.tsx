@@ -59,7 +59,7 @@ const readInset = (element: HTMLElement, side: SafeSide): number => {
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const TimePicker = memo(({ value, onChange }: TimePickerProps) => {
+const TimePicker = memo(({ value, onChange, clearable = true }: TimePickerProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [tempTime, setTempTime] = useState<TempTime>(() => parseTimeValue(value));
     const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -367,13 +367,15 @@ const TimePicker = memo(({ value, onChange }: TimePickerProps) => {
                     </div>
 
                     <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={handleClear}
-                            className="flex-1 rounded-lg border border-app-border py-2 text-xs font-medium text-app-text-muted transition-colors hover:bg-app-bg focus:outline-none focus:ring-2 focus:ring-app-primary"
-                        >
-                            Clear
-                        </button>
+                        {clearable && (
+                            <button
+                                type="button"
+                                onClick={handleClear}
+                                className="flex-1 rounded-lg border border-app-border py-2 text-xs font-medium text-app-text-muted transition-colors hover:bg-app-bg focus:outline-none focus:ring-2 focus:ring-app-primary"
+                            >
+                                Clear
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={handleSave}

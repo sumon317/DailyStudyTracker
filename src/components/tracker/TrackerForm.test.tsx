@@ -523,15 +523,32 @@ describe('TrackerForm', () => {
         );
     });
 
-    it('refuses a reminder for a subject with no id', async () => {
+    it('arms a reminder for a valid subject id of zero', async () => {
+        setClock('2024-01-15T08:00:00');
         const user = userEvent.setup();
+        // Storage accepts every safe integer from zero upwards, so a restored
+        // backup can legitimately carry id 0. Only a missing id is unusable.
         render(<TrackerFormHarness initial={[{ ...baseSubject, id: 0, time: '09:30' }]} />);
+
+        await user.click(plannerButton('Set reminder for subject 1'));
+
+        await waitFor(() => expect(NotificationService.scheduleNotification).toHaveBeenCalled());
+        expect(vi.mocked(NotificationService.scheduleNotification).mock.calls[0]?.[0]).toBe(0);
+        await waitFor(() =>
+            expect(screen.getAllByRole('button', { name: 'Cancel reminder for subject 1' })).toHaveLength(2),
+        );
+    });
+
+    it('refuses a reminder for a subject with an unusable id', async () => {
+        const user = userEvent.setup();
+        render(<TrackerFormHarness initial={[{ ...baseSubject, id: -1, time: '09:30' }]} />);
 
         await user.click(plannerButton('Set reminder for subject 1'));
 
         expect(showToastSpy).toHaveBeenCalledWith(
             expect.objectContaining({ type: 'error', message: expect.stringContaining('missing ID') }),
         );
+        expect(NotificationService.scheduleNotification).not.toHaveBeenCalled();
     });
 
     it('refuses a reminder whose stored time is malformed', async () => {
@@ -615,6 +632,21 @@ describe('TrackerForm', () => {
         // no longer shows, so both the time and the reminder stay as they were.
         expect(plannerButton(/Study time: 9:30 AM/)).toBeInTheDocument();
         expect(screen.getAllByRole('button', { name: 'Cancel reminder for subject 1' })).toHaveLength(2);
+    });
+
+    it('leaves an armed reminder alone when its unchanged time is confirmed again', async () => {
+        const user = userEvent.setup();
+        render(<TrackerFormHarness initial={[{ ...baseSubject, time: '09:30', reminder: true }]} />);
+
+        await user.click(plannerButton(/Study time: 9:30 AM/));
+        const dialog = await screen.findByRole('dialog', { name: 'Set study time' });
+        await user.click(within(dialog).getByRole('button', { name: 'Set' }));
+
+        // Re-opening the picker and pressing Set is not an edit. Cancelling the
+        // alarm here switched the reminder off without saying so.
+        expect(NotificationService.cancelNotification).not.toHaveBeenCalled();
+        expect(screen.getAllByRole('button', { name: 'Cancel reminder for subject 1' })).toHaveLength(2);
+        expect(plannerButton(/Study time: 9:30 AM/)).toBeInTheDocument();
     });
 
     it('changes a time freely while no reminder is scheduled', async () => {

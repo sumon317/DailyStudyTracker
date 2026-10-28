@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportData } from '../../types';
-import { generatePDF } from './pdfGenerator';
+import { buildPdf, generatePDF } from './pdfGenerator';
 
 const nativeState = vi.hoisted(() => ({
     native: false,
@@ -172,5 +172,31 @@ describe('pdfGenerator', () => {
 
         expect(pdfCalls.addPage).toBeGreaterThan(2);
         expect(pdfCalls.text.filter((line) => line.startsWith('[ ] Item '))).toHaveLength(180);
+    });
+
+    it('moves the Error Log to a new page when the last todo ends near the bottom', () => {
+        // With no subject table the todo list ends at y=284, past the 280 page
+        // boundary. The Error Log heading must start on a fresh page instead of
+        // being drawn off the bottom edge.
+        const doc = {
+            addPage: vi.fn(),
+            setFont: vi.fn(),
+            setFontSize: vi.fn(),
+            text: vi.fn(),
+        };
+        const todos = Array.from({ length: 30 }, (_value, index) => ({
+            id: index + 1,
+            text: `Todo ${index + 1}`,
+            completed: false,
+            time: '',
+            reminder: false,
+        }));
+
+        buildPdf(
+            makeData({ subjects: [], checklistItems: [], qualityChecks: [], todos, errors: [] }),
+            doc as never,
+        );
+
+        expect(doc.addPage).toHaveBeenCalledTimes(1);
     });
 });
