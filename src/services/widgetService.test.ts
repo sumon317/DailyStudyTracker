@@ -146,20 +146,54 @@ describe('widgetBridge', () => {
         });
 
         it('orders timed subjects by start time and leaves untimed ones last', async () => {
-            const subjects = [
-                { id: 3, name: 'Evening', planned: '30', actual: '0', kpi: 'N', time: '18:00', reminder: false },
-                { id: 2, name: 'Untimed', planned: '30', actual: '0', kpi: 'N', time: '', reminder: false },
-                { id: 1, name: 'Morning', planned: '30', actual: '0', kpi: 'N', time: '08:00', reminder: false },
-            ];
+            // The order must not depend on the hour the suite happens to run in. A subject is
+            // hidden once its planned window has elapsed, so a fixed morning start would
+            // vanish from the widget on every evening run - which is exactly what this test
+            // used to do.
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date(2024, 0, 15, 0, 0, 0));
+            try {
+                const subjects = [
+                    { id: 3, name: 'Evening', planned: '30', actual: '0', kpi: 'N', time: '18:00', reminder: false },
+                    { id: 2, name: 'Untimed', planned: '30', actual: '0', kpi: 'N', time: '', reminder: false },
+                    { id: 1, name: 'Morning', planned: '30', actual: '0', kpi: 'N', time: '08:00', reminder: false },
+                ];
 
-            await updateWidget(subjects as never);
+                await updateWidget(subjects as never);
 
-            const payload = updateData.mock.calls[0]?.[0] as { data: string };
-            expect((JSON.parse(payload.data) as Array<{ name: string }>).map((entry) => entry.name)).toEqual([
-                'Morning',
-                'Evening',
-                'Untimed',
-            ]);
+                const payload = updateData.mock.calls[0]?.[0] as { data: string };
+                expect((JSON.parse(payload.data) as Array<{ name: string }>).map((entry) => entry.name)).toEqual([
+                    'Morning',
+                    'Evening',
+                    'Untimed',
+                ]);
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it('orders by the time of day rather than by the text of the time', async () => {
+            // "9:05" is before "10:00" as a time of day, but after it as a string, because
+            // "9" sorts after "1". A widget that ordered by text would show the evening
+            // subject above the morning one.
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date(2024, 0, 15, 0, 0, 0));
+            try {
+                const subjects = [
+                    { id: 1, name: 'Ten', planned: '30', actual: '0', kpi: 'N', time: '10:00', reminder: false },
+                    { id: 2, name: 'Nine', planned: '30', actual: '0', kpi: 'N', time: '9:05', reminder: false },
+                ];
+
+                await updateWidget(subjects as never);
+
+                const payload = updateData.mock.calls[0]?.[0] as { data: string };
+                expect((JSON.parse(payload.data) as Array<{ name: string }>).map((entry) => entry.name)).toEqual([
+                    'Nine',
+                    'Ten',
+                ]);
+            } finally {
+                vi.useRealTimers();
+            }
         });
 
         it('swallows plugin failures', async () => {

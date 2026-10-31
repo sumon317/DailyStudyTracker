@@ -32,6 +32,16 @@ android/local.properties
 *.swp
 *.swo
 *~
+# Eclipse/JDT per-module settings. The Gradle build regenerates what it needs,
+# and these files record one developer's IDE choices rather than the project.
+android/app/.settings/
+
+# Editor and agent tooling state. These directories hold session state,
+# hook baselines and scan reports: they are regenerated on every run, are
+# specific to one machine, and have no business in the repository.
+.mimosa/
+.zcode/
+.opencode/.cache/
 
 # OS generated files
 .DS_Store

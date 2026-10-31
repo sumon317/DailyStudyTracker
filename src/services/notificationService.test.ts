@@ -679,7 +679,7 @@ describe('NotificationService', () => {
             expect(audioMocks.instances[0]?.dispose).toHaveBeenCalledTimes(1);
         });
 
-        it('does not let a click on an old occurrence silence the next day\'s alarm', async () => {
+        it("does not let a click on an old occurrence silence the next day's alarm", async () => {
             vi.useFakeTimers();
             vi.setSystemTime(new Date(2026, 11, 1, 10, 0, 0));
             const { instances } = installMockNotification();
@@ -694,7 +694,7 @@ describe('NotificationService', () => {
             // Arming the second occurrence already disposed the first
             // controller. The click must add exactly one more disposal for its
             // own tone, and must not touch the controller that is ringing now.
-            const previousDisposals = audioMocks.instances[0]?.dispose.mock.calls.length ?? 0;
+            const previousDisposals = audioMocks.instances[0]?.dispose?.mock.calls.length ?? 0;
             first?.onclick?.();
 
             expect(audioMocks.instances[0]?.dispose).toHaveBeenCalledTimes(previousDisposals + 1);
@@ -1808,7 +1808,8 @@ describe('NotificationService', () => {
             }
         });
 
-        it('registers nothing in a browser, where no notification goes through the plugin', async () => {// The web path builds its own `Notification` objects, so neither
+        it('registers nothing in a browser, where no notification goes through the plugin', async () => {
+            // The web path builds its own `Notification` objects, so neither
             // plugin event can ever describe one of them. Registering anyway
             // attached two listeners nothing in this service can reach.
             await expect(NotificationService.initListeners(vi.fn(), vi.fn())).resolves.toBeUndefined();

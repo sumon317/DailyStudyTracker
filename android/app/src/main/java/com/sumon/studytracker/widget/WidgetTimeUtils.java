@@ -98,15 +98,26 @@ public final class WidgetTimeUtils {
         if (time == null) {
             return -1;
         }
-        int separator = time.indexOf(':');
-        if (separator <= 0 || separator == time.length() - 1) {
+        String trimmed = time.trim();
+        int separator = trimmed.indexOf(':');
+        if (separator <= 0 || separator == trimmed.length() - 1) {
+            return -1;
+        }
+        String hourPart = trimmed.substring(0, separator).trim();
+        String minutePart = trimmed.substring(separator + 1).trim();
+        // `H:MM` or `HH:MM`: the hour carries one or two digits and the minute always carries
+        // two. The parser used to accept a one-digit minute, so `9:5` was read as 09:05 here
+        // while the web layer rejected it as malformed - the two ends of the bridge disagreed
+        // about what a stored time was, and the row moved between them. The web layer writes
+        // `HH:MM`, so anything else is a value this build never produced.
+        if (hourPart.length() > 2 || minutePart.length() != 2 || !isDigits(hourPart) || !isDigits(minutePart)) {
             return -1;
         }
         int hours;
         int minutes;
         try {
-            hours = Integer.parseInt(time.substring(0, separator).trim());
-            minutes = Integer.parseInt(time.substring(separator + 1).trim());
+            hours = Integer.parseInt(hourPart);
+            minutes = Integer.parseInt(minutePart);
         } catch (NumberFormatException exception) {
             return -1;
         }
@@ -114,6 +125,17 @@ public final class WidgetTimeUtils {
             return -1;
         }
         return hours * 60 + minutes;
+    }
+
+    /** Whether every character is an ASCII digit. */
+    private static boolean isDigits(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character < '0' || character > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -147,7 +169,12 @@ public final class WidgetTimeUtils {
 
     /**
      * Orders by actual time of day rather than lexically, so {@code "9:05"} sorts before
-     * {@code "10:00"}. Unusable values sort last, and ties fall back to a deterministic comparison.
+     * {@code "10:00"}. Unusable values sort last.
+     *
+     * <p>Two unusable values compare equal, so {@link java.util.Collections#sort} keeps them in
+     * the order they arrived in. Sorting them by their text instead would order corrupt rows by
+     * a string the user never wrote, and the web layer - which publishes the payload this side
+     * sorts - keeps those rows in the order they were stored in, so the two ends agree.
      */
     public static int compareByStartTime(String first, String second) {
         boolean firstMissing = first == null || first.isEmpty();
@@ -165,7 +192,7 @@ public final class WidgetTimeUtils {
         int firstMinutes = timeOfDayMinutes(first);
         int secondMinutes = timeOfDayMinutes(second);
         if (firstMinutes < 0 && secondMinutes < 0) {
-            return first.compareTo(second);
+            return 0;
         }
         if (firstMinutes < 0) {
             return 1;

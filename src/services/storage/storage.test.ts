@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_FOCUS_ALARMS } from '../native/alarmLimits';
-import type { BackupEnvelope, BackupSettings, DayData, RecurringSubject, Subject } from '../types';
+import { MAX_FOCUS_ALARMS } from '../../native/alarmLimits';
+import type { BackupEnvelope, BackupSettings, DayData, RecurringSubject, Subject } from '../../types';
 
 const nativeState = vi.hoisted(() => ({
     fileData: null as string | null,
@@ -98,7 +98,7 @@ vi.mock('@capacitor/filesystem', () => ({
     Filesystem: nativeFs,
 }));
 
-import type { ImportConflictPolicy } from './storage';
+import type { ImportConflictPolicy } from './index';
 import {
     BACKUP_SCHEMA_VERSION,
     exportAllData,
@@ -122,7 +122,7 @@ import {
     saveToNativeStorage,
     UnsupportedSchemaError,
     validateBackup,
-} from './storage';
+} from './index';
 
 const makeSubject = (overrides: Partial<DayData['subjects'][number]> = {}): DayData['subjects'][number] => ({
     id: 1,
@@ -1311,7 +1311,7 @@ describe('web platform mirror', () => {
     const importWebStorage = async () => {
         vi.resetModules();
         vi.doMock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }));
-        return import('./storage');
+        return import('./index');
     };
 
     /** The rows the web store is holding, straight out of the table the module wrote them to. */

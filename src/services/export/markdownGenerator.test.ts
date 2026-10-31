@@ -122,11 +122,11 @@ describe('markdownGenerator', () => {
             const createObjectURL = vi.fn(() => 'blob:study-tracker');
             const revokeObjectURL = vi.fn();
             let clicked: { download: string; href: string } | null = null;
-            const click = vi
-                .spyOn(HTMLAnchorElement.prototype, 'click')
-                .mockImplementation(function (this: HTMLAnchorElement) {
-                    clicked = { download: this.download, href: this.href };
-                });
+            const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+                this: HTMLAnchorElement,
+            ) {
+                clicked = { download: this.download, href: this.href };
+            });
             Object.assign(URL, { createObjectURL, revokeObjectURL });
 
             try {

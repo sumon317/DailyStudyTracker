@@ -192,10 +192,7 @@ describe('pdfGenerator', () => {
             reminder: false,
         }));
 
-        buildPdf(
-            makeData({ subjects: [], checklistItems: [], qualityChecks: [], todos, errors: [] }),
-            doc as never,
-        );
+        buildPdf(makeData({ subjects: [], checklistItems: [], qualityChecks: [], todos, errors: [] }), doc as never);
 
         expect(doc.addPage).toHaveBeenCalledTimes(1);
     });

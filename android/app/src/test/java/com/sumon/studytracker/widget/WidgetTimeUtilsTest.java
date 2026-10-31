@@ -115,6 +115,12 @@ public class WidgetTimeUtilsTest {
         assertEquals(-1, WidgetTimeUtils.timeOfDayMinutes("24:00"));
         assertEquals(-1, WidgetTimeUtils.timeOfDayMinutes("09:60"));
         assertEquals(-1, WidgetTimeUtils.timeOfDayMinutes("later"));
+        // A one-digit minute is not a time this build writes. The web layer rejects it as
+        // malformed, so reading it here as 09:05 made the two ends of the bridge disagree
+        // about the same stored value.
+        assertEquals(-1, WidgetTimeUtils.timeOfDayMinutes("9:5"));
+        assertEquals(-1, WidgetTimeUtils.timeOfDayMinutes("+9:05"));
+        assertEquals(-1, WidgetTimeUtils.timeOfDayMinutes("007:05"));
     }
 
     @Test
@@ -181,7 +187,11 @@ public class WidgetTimeUtilsTest {
         assertTrue(WidgetTimeUtils.compareByStartTime("10:00", null) < 0);
         assertTrue(WidgetTimeUtils.compareByStartTime("10:00", "later") < 0);
         assertTrue(WidgetTimeUtils.compareByStartTime("later", "10:00") > 0);
-        assertTrue(WidgetTimeUtils.compareByStartTime("later", "whenever") != 0);
+        // Two unusable values compare equal, so the sort keeps them in the order they arrived
+        // in. Ordering corrupt rows by their text would sort them by a string the user never
+        // wrote, and the web layer publishes them in the order they were stored.
+        assertEquals(0, WidgetTimeUtils.compareByStartTime("later", "whenever"));
+        assertEquals(0, WidgetTimeUtils.compareByStartTime("whenever", "later"));
         assertEquals(0, WidgetTimeUtils.compareByStartTime("", ""));
     }
 

@@ -750,13 +750,7 @@ export default function DataProvider({ children }: DataProviderProps) {
             })();
         }
         void initializationPromiseRef.current;
-    }, [
-        hasUnsavedWrites,
-        loadDataForDateInternal,
-        markInitialized,
-        reportPersistenceError,
-        syncDirtyState,
-    ]);
+    }, [hasUnsavedWrites, loadDataForDateInternal, markInitialized, reportPersistenceError, syncDirtyState]);
 
     useEffect(() => {
         const interval = window.setInterval(() => {

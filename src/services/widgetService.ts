@@ -22,17 +22,39 @@ const WidgetData = registerPlugin<WidgetDataPlugin>('WidgetData');
  */
 export const MAX_WIDGET_ITEMS = 200;
 
+/**
+ * Minutes since midnight for a usable `H:MM` or `HH:MM` time, or `null` when the value is not
+ * one.
+ *
+ * Mirrors `WidgetTimeUtils.timeOfDayMinutes` on the native side. The native widget re-sorts and
+ * re-filters the payload it is given, so both ends have to agree on which strings count as a
+ * time: a row this layer treats as untimed but the native treats as timed would move under the
+ * user while they are looking at it. `9:05` is a time; `9:5` is not - the minute part is always
+ * two digits, exactly as the native side has always documented.
+ */
 function getTimeInMinutes(time: string): number | null {
-    const match = /^(\d{1,2}):([0-5]\d)$/.exec(time);
+    const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
     if (!match) {
         return null;
     }
     const hours = Number.parseInt(match[1] ?? '', 10);
     const minutes = Number.parseInt(match[2] ?? '', 10);
-    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    if (hours > 23 || minutes > 59) {
         return null;
     }
     return hours * 60 + minutes;
+}
+
+/**
+ * Planned minutes for a subject, or `0` when the value is not a usable number.
+ *
+ * A non-finite value parses as a number but would make the row immortal: its window would never
+ * end, so it would outlive every other subject on the day. The native side rejects the same
+ * values for the same reason.
+ */
+function getPlannedMinutes(planned: string): number {
+    const parsed = Number.parseFloat(planned);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 export const updateWidget = async (subjects: Subject[], date?: string): Promise<void> => {
@@ -53,27 +75,30 @@ export const updateWidget = async (subjects: Subject[], date?: string): Promise<
                 reminder: subject.reminder,
             }))
             .filter((subject) => {
-                if (!subject.time) {
-                    return true;
-                }
                 const startMinutes = getTimeInMinutes(subject.time);
                 if (startMinutes === null) {
+                    // No usable window to close, so the row stays visible.
                     return true;
                 }
-                const plannedMinutes = Number.parseFloat(subject.planned) || 0;
-                return currentMinutes < startMinutes + Math.max(0, plannedMinutes);
+                return currentMinutes < startMinutes + getPlannedMinutes(subject.planned);
             })
             .sort((first, second) => {
-                if (first.time !== second.time) {
-                    if (!first.time) {
-                        return 1;
-                    }
-                    if (!second.time) {
-                        return -1;
-                    }
-                    return first.time.localeCompare(second.time);
+                // Ordered by actual time of day rather than lexically, so "9:05" sorts before
+                // "10:00". Times that cannot be read sort last, and rows that tie keep the order
+                // they were stored in - the same contract as the native comparator, which sorts
+                // the payload again when it renders.
+                const firstMinutes = getTimeInMinutes(first.time);
+                const secondMinutes = getTimeInMinutes(second.time);
+                if (firstMinutes === null && secondMinutes === null) {
+                    return 0;
                 }
-                return first.id - second.id;
+                if (firstMinutes === null) {
+                    return 1;
+                }
+                if (secondMinutes === null) {
+                    return -1;
+                }
+                return firstMinutes - secondMinutes;
             });
 
         // Refused here rather than published and truncated on the other side. The

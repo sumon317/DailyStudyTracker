@@ -1697,9 +1697,7 @@ describe('DataProvider', () => {
             expect(mockSaveToNativeStorage).toHaveBeenCalledWith(
                 getTodayLocalDate(),
                 expect.objectContaining({
-                    subjects: expect.arrayContaining([
-                        expect.objectContaining({ name: 'Typed before the failure' }),
-                    ]),
+                    subjects: expect.arrayContaining([expect.objectContaining({ name: 'Typed before the failure' })]),
                 }),
             );
         });

@@ -113,6 +113,8 @@ Commit the generated `bun.lock`. Do not generate or commit `package-lock.json`.
 | `bun run android:sync` | Build web assets and sync them to the Android project |
 | `bun run android:open` | Open the Android project in Android Studio |
 
+The four gates live in `scripts/` as ordinary TypeScript files, run by Bun and typechecked by `tsconfig.scripts.json`. They were inline `bun -e` one-liners in `package.json` until they grew past a thousand characters each, which made them unreadable to anyone who wanted to change them.
+
 Run `bun audit --audit-level=high` to audit installed dependencies. High and critical advisories fail CI. Moderate and low advisories do not fail the configured audit threshold and should be reviewed separately with `bun audit`.
 
 `license:check` inspects every installed package reached through `node_modules`, including nested installs, and requires that a real install happened: it fails if `node_modules` is missing or if no package was inspected, so it cannot pass vacuously. It matches on the declared `license`/`licenses` field only. It does not read `LICENSE` files, does not evaluate SPDX expressions, and uses substring matching, so it is a floor rather than a complete license audit.
@@ -121,7 +123,7 @@ Run `bun audit --audit-level=high` to audit installed dependencies. High and cri
 
 `assets:check` fails on a referenced asset that is missing, empty, or whose PNG dimensions disagree with its filename. An *unreferenced* file in `public/` is only reported as a warning. Four files are warned about today: `public/assets/blue_tang.png`, `clownfish.png`, `seaweed.png`, and `yellow_tang.png`. They are the source artwork the app icons were generated from and nothing in the app references them; because `workbox.globPatterns` matches `png`, they are copied into `dist/` and precached anyway, which is about 36 KB per install. Remove them if the artwork is not being kept for icon regeneration.
 
-Coverage thresholds are deliberately modest global regression floors because the current suite covers core providers, utilities, the main tracker view, and part of the review flow. Coverage output is written to `coverage/` and is not committed.
+Coverage thresholds are global regression floors. The suite currently measures about 93% of statements and lines, 86% of branches and 93% of functions, and the floor is set below those numbers so a change that drops a meaningful amount of coverage fails CI without blocking a contributor who adds a feature with tests. Coverage output is written to `coverage/` and is not committed.
 
 ## PWA behavior
 
@@ -160,7 +162,7 @@ src/
     charts/       StudyCharts, WeeklyStats
     dialogs/      AlarmPermissionModal, UpdateModal
     focus/        CountdownTimer, InbuiltAlarm, Stopwatch
-    layout/       BottomNavigation, Layout, ThemeSelector
+    layout/       Header, BottomNavigation, Layout, ThemeSelector
     review/       Checklist, QualityCheck, ErrorLog
     shared/       Clock, DatePicker, ErrorBoundary, SkeletonLoader, TimePicker
     tracker/      TrackerForm
@@ -169,12 +171,21 @@ src/
   providers/      DataProvider, ThemeProvider, ToastProvider
   services/
     export/       pdfGenerator, markdownGenerator
-    storage.ts    Dexie schema, native persistence, backup/restore
+    storage/      The storage layer, split by concern:
+                    constants.ts   keys, limits, schema version
+                    errors.ts      PersistenceError, UnsupportedSchemaError
+                    validation.ts  The validators an untrusted file has to pass
+                    backup.ts      The backup format: parse, convert, merge
+                    stores.ts      IndexedDB, localStorage and the native file
+                    state.ts       State the backends and the API share
+                    index.ts       The public surface the app imports
     notificationService.ts, updateService.ts, widgetService.ts
     alarmAudio.ts Canonical alarm tone URL and the shared media/WebAudio wiring
   test/           setup.ts, test-utils.tsx, cross-component accessibility.test.tsx
   types/          Shared TypeScript types
   utils/          Pure helpers only: dateUtils, sanitize
+scripts/          The repository gates: config-check, assets-check, pwa-check,
+                  license-check. Run by Bun, typechecked by tsconfig.scripts.json.
 ```
 
 Unit tests are co-located with the module they cover. `src/test/accessibility.test.tsx` is the one cross-component suite and lives with the test harness. There is no path alias configuration: imports are relative.
