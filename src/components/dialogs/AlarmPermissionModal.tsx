@@ -1,11 +1,26 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Settings, X } from 'lucide-react';
 import { memo, useEffect, useId, useRef } from 'react';
-import type { AlarmPermissionModalProps } from '../../types';
+import type { AlarmPermissionKey, AlarmPermissionModalProps } from '../../types';
 import { getFocusableElements } from '../shared/focusOrder';
 import { useModalLayer } from './useModalLayer';
 
-const AlarmPermissionModal = memo(({ isOpen, onClose, onOpenSettings }: AlarmPermissionModalProps) => {
+const PERMISSION_COPY: Record<AlarmPermissionKey, { title: string; detail: string }> = {
+    notifications: {
+        title: 'Notifications',
+        detail: 'Lets a ringing alarm reach you while the app is closed.',
+    },
+    exactAlarm: {
+        title: 'Alarms & reminders',
+        detail: 'Lets Android fire the alarm at the exact minute instead of delaying it.',
+    },
+    fullScreenIntent: {
+        title: 'Full-screen alerts',
+        detail: 'Lets the alarm open over the lock screen like a real alarm clock.',
+    },
+};
+
+const AlarmPermissionModal = memo(({ isOpen, onClose, onOpenSettings, missing }: AlarmPermissionModalProps) => {
     const dialogRef = useRef<HTMLDivElement>(null);
     const previousFocusRef = useRef<HTMLElement | null>(null);
     const onCloseRef = useRef(onClose);
@@ -129,14 +144,35 @@ const AlarmPermissionModal = memo(({ isOpen, onClose, onOpenSettings }: AlarmPer
                                 id={descriptionId}
                                 className="mb-6 rounded-xl border border-app-border bg-app-bg p-4 text-sm text-app-text-main"
                             >
-                                <p className="mb-3">
-                                    <strong>Your alarms may not work</strong> when the app is closed because Android
-                                    requires a special permission.
-                                </p>
-                                <p className="text-app-text-muted">
-                                    Please enable <strong>“Alarms &amp; Reminders”</strong> in Settings to ensure your
-                                    study reminders work reliably.
-                                </p>
+                                {missing && missing.length > 0 ? (
+                                    <>
+                                        <p className="mb-3">
+                                            <strong>Your alarms may not ring</strong> when the app is closed until
+                                            Android allows the following:
+                                        </p>
+                                        <ul className="list-disc space-y-2 pl-5 text-app-text-muted">
+                                            {missing.map((key) => (
+                                                <li key={key}>
+                                                    <strong className="text-app-text-main">
+                                                        {PERMISSION_COPY[key].title}
+                                                    </strong>{' '}
+                                                    — {PERMISSION_COPY[key].detail}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="mb-3">
+                                            <strong>Your alarms may not work</strong> when the app is closed because
+                                            Android requires a special permission.
+                                        </p>
+                                        <p className="text-app-text-muted">
+                                            Please enable <strong>“Alarms &amp; Reminders”</strong> in Settings to
+                                            ensure your study reminders work reliably.
+                                        </p>
+                                    </>
+                                )}
                             </div>
 
                             <div className="flex gap-3">
@@ -158,7 +194,9 @@ const AlarmPermissionModal = memo(({ isOpen, onClose, onOpenSettings }: AlarmPer
                             </div>
 
                             <p className="mt-4 text-center text-xs text-app-text-muted">
-                                Go to: Settings → Apps → Daily Study Tracker → Alarms &amp; Reminders
+                                {missing && missing.length > 0
+                                    ? 'Each tap opens the matching Android screen, one permission at a time.'
+                                    : 'Go to: Settings → Apps → Daily Study Tracker → Alarms & Reminders'}
                             </p>
                         </div>
                     </motion.div>

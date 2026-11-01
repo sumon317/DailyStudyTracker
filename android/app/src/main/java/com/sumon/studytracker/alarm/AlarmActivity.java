@@ -1,5 +1,8 @@
 package com.sumon.studytracker.alarm;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.KeyguardManager;
 import android.content.Context;
@@ -14,6 +17,7 @@ import android.os.Vibrator;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -22,6 +26,7 @@ import androidx.core.view.OnApplyWindowInsetsListener;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.sumon.studytracker.MainActivity;
 import com.sumon.studytracker.R;
 
 import java.io.IOException;
@@ -45,6 +50,7 @@ public class AlarmActivity extends Activity {
 
     private MediaPlayer mediaPlayer;
     private Vibrator vibrator;
+    private AnimatorSet pulseAnimatorSet;
     private volatile int currentAlarmId = -1;
     private boolean alarmFinished;
 
@@ -99,6 +105,7 @@ public class AlarmActivity extends Activity {
         TextView titleView = findViewById(R.id.alarm_title);
         TextView bodyView = findViewById(R.id.alarm_body);
         Button stopButton = findViewById(R.id.btn_stop_alarm);
+        Button openAppButton = findViewById(R.id.btn_open_app);
         if (titleView != null) {
             titleView.setText(title);
         }
@@ -113,6 +120,27 @@ public class AlarmActivity extends Activity {
                 }
             });
         }
+        if (openAppButton != null) {
+            openAppButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    try {
+                        Intent openIntent = new Intent(AlarmActivity.this, MainActivity.class);
+                        openIntent.addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK
+                                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        );
+                        startActivity(openIntent);
+                    } catch (Exception exception) {
+                        Log.w(TAG, "Failed to launch MainActivity", exception);
+                    }
+                    finishAlarm();
+                }
+            });
+        }
+
+        startPulseAnimations();
 
         // This activity owns the sound from here on, so the ringing notification that was
         // posted as the background-start fallback is withdrawn before MediaPlayer starts.
@@ -203,36 +231,118 @@ public class AlarmActivity extends Activity {
     }
 
     /**
-     * Keeps the alarm content clear of the system bars.
+     * Keeps the alarm content clear of the system bars while letting the background fill edge-to-edge.
      *
      * <p>This app targets API 36, and from API 35 the platform enforces edge-to-edge for such
-     * apps: the window is laid out behind the status and navigation bars and the framework no
-     * longer insets the content view for us. The alarm layout is a plain padded {@code
-     * LinearLayout}, so without this the top of the icon is drawn under the status bar and the
-     * stop button can sit under the navigation bar. Up to API 34 the decor already fits the
-     * system windows, the insets reported here are zero, and this is a no-op.
+     * apps: the window is laid out behind the status and navigation bars. We make the system bars
+     * transparent so our cosmic gradient fills the full screen, and inset {@code alarm_container}
+     * so that the clocks, illustrations, text and buttons are kept comfortably inside the safe area.
      */
     private void applySystemBarInsets() {
-        final View content = findViewById(android.R.id.content);
-        if (content == null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+
+        final View container = findViewById(R.id.alarm_container);
+        if (container != null) {
+            final int basePaddingStart = container.getPaddingStart();
+            final int basePaddingEnd = container.getPaddingEnd();
+            final int basePaddingTop = container.getPaddingTop();
+            final int basePaddingBottom = container.getPaddingBottom();
+
+            ViewCompat.setOnApplyWindowInsetsListener(container,
+                    new OnApplyWindowInsetsListener() {
+                        @Override
+                        public WindowInsetsCompat onApplyWindowInsets(
+                                View view,
+                                WindowInsetsCompat windowInsets
+                        ) {
+                            Insets bars = windowInsets.getInsets(
+                                    WindowInsetsCompat.Type.systemBars()
+                                            | WindowInsetsCompat.Type.displayCutout()
+                            );
+                            view.setPadding(
+                                    basePaddingStart + bars.left,
+                                    basePaddingTop + bars.top,
+                                    basePaddingEnd + bars.right,
+                                    basePaddingBottom + bars.bottom
+                            );
+                            return windowInsets;
+                        }
+                    });
+            ViewCompat.requestApplyInsets(container);
             return;
         }
-        ViewCompat.setOnApplyWindowInsetsListener(content,
-                new OnApplyWindowInsetsListener() {
-                    @Override
-                    public WindowInsetsCompat onApplyWindowInsets(
-                            View view,
-                            WindowInsetsCompat windowInsets
-                    ) {
-                        Insets bars = windowInsets.getInsets(
-                                WindowInsetsCompat.Type.systemBars()
-                                        | WindowInsetsCompat.Type.displayCutout()
-                        );
-                        view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
-                        return windowInsets;
-                    }
-                });
-        ViewCompat.requestApplyInsets(content);
+
+        final View content = findViewById(android.R.id.content);
+        if (content != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(content,
+                    new OnApplyWindowInsetsListener() {
+                        @Override
+                        public WindowInsetsCompat onApplyWindowInsets(
+                                View view,
+                                WindowInsetsCompat windowInsets
+                        ) {
+                            Insets bars = windowInsets.getInsets(
+                                    WindowInsetsCompat.Type.systemBars()
+                                            | WindowInsetsCompat.Type.displayCutout()
+                            );
+                            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                            return windowInsets;
+                        }
+                    });
+            ViewCompat.requestApplyInsets(content);
+        }
+    }
+
+    private void startPulseAnimations() {
+        View haloOuter = findViewById(R.id.alarm_halo_outer);
+        View haloInner = findViewById(R.id.alarm_halo_inner);
+        View iconContainer = findViewById(R.id.alarm_icon_container);
+        if (haloOuter == null || haloInner == null) {
+            return;
+        }
+
+        ObjectAnimator scaleXOuter = ObjectAnimator.ofFloat(haloOuter, "scaleX", 1.0f, 1.15f);
+        ObjectAnimator scaleYOuter = ObjectAnimator.ofFloat(haloOuter, "scaleY", 1.0f, 1.15f);
+        ObjectAnimator alphaOuter = ObjectAnimator.ofFloat(haloOuter, "alpha", 0.35f, 0.85f);
+
+        ObjectAnimator scaleXInner = ObjectAnimator.ofFloat(haloInner, "scaleX", 1.0f, 1.10f);
+        ObjectAnimator scaleYInner = ObjectAnimator.ofFloat(haloInner, "scaleY", 1.0f, 1.10f);
+        ObjectAnimator alphaInner = ObjectAnimator.ofFloat(haloInner, "alpha", 0.5f, 0.95f);
+
+        ObjectAnimator scaleXIcon = iconContainer != null
+                ? ObjectAnimator.ofFloat(iconContainer, "scaleX", 1.0f, 1.06f)
+                : null;
+        ObjectAnimator scaleYIcon = iconContainer != null
+                ? ObjectAnimator.ofFloat(iconContainer, "scaleY", 1.0f, 1.06f)
+                : null;
+
+        ObjectAnimator[] animators;
+        if (scaleXIcon != null && scaleYIcon != null) {
+            animators = new ObjectAnimator[]{scaleXOuter, scaleYOuter, alphaOuter, scaleXInner, scaleYInner, alphaInner, scaleXIcon, scaleYIcon};
+        } else {
+            animators = new ObjectAnimator[]{scaleXOuter, scaleYOuter, alphaOuter, scaleXInner, scaleYInner, alphaInner};
+        }
+
+        for (ObjectAnimator anim : animators) {
+            anim.setDuration(1600);
+            anim.setRepeatCount(ValueAnimator.INFINITE);
+            anim.setRepeatMode(ValueAnimator.REVERSE);
+            anim.setInterpolator(new AccelerateDecelerateInterpolator());
+        }
+
+        pulseAnimatorSet = new AnimatorSet();
+        pulseAnimatorSet.playTogether(animators);
+        pulseAnimatorSet.start();
+    }
+
+    private void stopPulseAnimations() {
+        if (pulseAnimatorSet != null) {
+            pulseAnimatorSet.cancel();
+            pulseAnimatorSet = null;
+        }
     }
 
     private void startAlarmAudioAndVibration() {
@@ -292,6 +402,7 @@ public class AlarmActivity extends Activity {
             return;
         }
         alarmFinished = true;
+        stopPulseAnimations();
         releaseAlarmMedia();
         AlarmNotifications.cancel(this, currentAlarmId);
         finish();
@@ -320,6 +431,7 @@ public class AlarmActivity extends Activity {
         if (activeActivity.get() == this) {
             activeActivity = new WeakReference<>(null);
         }
+        stopPulseAnimations();
         // onBackPressed() below keeps the legacy callback alive, but any teardown that skips it
         // (a task eviction, a "don't keep activities" developer option) still has to silence the
         // ring, so the teardown path releases the media unconditionally.

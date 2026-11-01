@@ -1,47 +1,218 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/alarm_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="#121212"
-    android:padding="32dp">
+    android:background="@drawable/alarm_bg_gradient">
 
-    <ImageView
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:src="@drawable/ic_timer_icon"
-        android:layout_marginBottom="32dp"
-        android:tint="#8B5CF6"/> <!-- Tailwind Violet-500 equivalent -->
-
-    <TextView
-        android:id="@+id/alarm_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Time's Up!"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:id="@+id/alarm_body"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Your scheduled time has finished."
-        android:textSize="18sp"
-        android:textColor="#A0A0A0"
-        android:gravity="center"
-        android:layout_marginBottom="64dp"/>
-
-    <Button
-        android:id="@+id/btn_stop_alarm"
+    <ScrollView
+        android:id="@+id/alarm_scroll"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:text="STOP ALARM"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#EF4444" /> <!-- Tailwind Red-500 equivalent -->
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
 
-</LinearLayout>
+        <LinearLayout
+            android:id="@+id/alarm_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp">
+
+            <!-- Aesthetic Top Badge -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/alarm_pill_badge"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp">
+
+                <View
+                    android:id="@+id/alarm_badge_dot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/alarm_icon_bg"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FOCUS SESSION COMPLETE"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:textColor="#C4B5FD" />
+            </LinearLayout>
+
+            <!-- Digital Clock Display -->
+            <TextClock
+                android:id="@+id/alarm_clock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="h:mm a"
+                android:format24Hour="HH:mm"
+                android:textColor="#FFFFFF"
+                android:textSize="46sp"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginBottom="2dp" />
+
+            <TextClock
+                android:id="@+id/alarm_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="EEEE, MMMM d"
+                android:format24Hour="EEEE, MMMM d"
+                android:textColor="#94A3B8"
+                android:textSize="14sp"
+                android:letterSpacing="0.02"
+                android:layout_marginBottom="28dp" />
+
+            <!-- Breathing / Pulsing Glowing Alarm Icon Section -->
+            <FrameLayout
+                android:id="@+id/alarm_halo_frame"
+                android:layout_width="210dp"
+                android:layout_height="210dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="28dp">
+
+                <!-- Outer pulsing glow halo -->
+                <View
+                    android:id="@+id/alarm_halo_outer"
+                    android:layout_width="210dp"
+                    android:layout_height="210dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/alarm_halo_outer" />
+
+                <!-- Inner pulsing glow halo -->
+                <View
+                    android:id="@+id/alarm_halo_inner"
+                    android:layout_width="160dp"
+                    android:layout_height="160dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/alarm_halo_inner" />
+
+                <!-- Central gradient circle with alarm bell -->
+                <FrameLayout
+                    android:id="@+id/alarm_icon_container"
+                    android:layout_width="104dp"
+                    android:layout_height="104dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/alarm_icon_bg"
+                    android:elevation="6dp">
+
+                    <ImageView
+                        android:id="@+id/alarm_icon"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_alarm_bell"
+                        android:contentDescription="@null" />
+                </FrameLayout>
+            </FrameLayout>
+
+            <!-- Card with Alarm Title, Body & Motivational Note -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:background="@drawable/alarm_card_bg"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp"
+                android:layout_marginBottom="28dp">
+
+                <TextView
+                    android:id="@+id/alarm_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Time's Up!"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:gravity="center"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/alarm_body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your scheduled focus time has finished."
+                    android:textSize="15sp"
+                    android:textColor="#CBD5E1"
+                    android:lineSpacingExtra="4dp"
+                    android:gravity="center"
+                    android:layout_marginBottom="14dp" />
+
+                <View
+                    android:layout_width="48dp"
+                    android:layout_height="1dp"
+                    android:background="#26FFFFFF"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Take a mindful breath before continuing ✨"
+                    android:textSize="13sp"
+                    android:textColor="#C4B5FD"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Primary Action: Dismiss / Stop Alarm -->
+            <Button
+                android:id="@+id/btn_stop_alarm"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:background="@drawable/btn_stop_alarm_bg"
+                android:backgroundTint="@null"
+                android:text="Dismiss Alarm"
+                android:textAllCaps="false"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:drawableStart="@drawable/ic_alarm_stop"
+                android:drawableTint="#FFFFFF"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:drawablePadding="12dp"
+                android:stateListAnimator="@null"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Secondary Action: Dismiss and Return to Study Tracker -->
+            <Button
+                android:id="@+id/btn_open_app"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/btn_open_app_bg"
+                android:backgroundTint="@null"
+                android:text="Open Study Tracker"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#E2E8F0"
+                android:drawableEnd="@drawable/ic_arrow_forward"
+                android:drawableTint="#94A3B8"
+                android:paddingStart="24dp"
+                android:paddingEnd="20dp"
+                android:stateListAnimator="@null" />
+
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

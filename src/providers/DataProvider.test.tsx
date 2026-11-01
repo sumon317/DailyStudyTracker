@@ -4,7 +4,7 @@ import { DATA_IMPORTED_EVENT } from '../services/dataImportEvents';
 import { TestWrapper } from '../test/test-utils';
 import type { DayData, Subject, Todo } from '../types';
 import { addLocalDays, getTodayLocalDate, parseLocalDate } from '../utils/dateUtils';
-import { useData } from './DataProvider';
+import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_INTERVAL_MS, useData } from './DataProvider';
 
 // Mock dependencies BEFORE importing the provider
 const mockGeneratePDF = vi.hoisted(() => vi.fn());
@@ -1134,7 +1134,7 @@ describe('DataProvider', () => {
                     ]);
                 });
                 await act(async () => {
-                    await vi.advanceTimersByTimeAsync(1000);
+                    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
                 });
                 expect(mockSaveToNativeStorage).toHaveBeenCalledTimes(1);
                 expect(lastDayPayload().subjects[0]?.name).toBe('Three');
@@ -1232,13 +1232,13 @@ describe('DataProvider', () => {
                     ]);
                 });
                 await act(async () => {
-                    await vi.advanceTimersByTimeAsync(1000);
+                    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
                 });
                 expect(onError).toHaveBeenCalledTimes(1);
                 expect(result.current.hasUnsavedChanges).toBe(true);
                 expect(result.current.lastSaved).toBeNull();
                 await act(async () => {
-                    await vi.advanceTimersByTimeAsync(10_000);
+                    await vi.advanceTimersByTimeAsync(AUTOSAVE_INTERVAL_MS);
                 });
                 expect(lastDayPayload().subjects[0]?.name).toBe('Retry on the interval');
                 expect(result.current.hasUnsavedChanges).toBe(false);
@@ -1269,7 +1269,7 @@ describe('DataProvider', () => {
                 });
                 // The debounced flush fails first, and is reported.
                 await act(async () => {
-                    await vi.advanceTimersByTimeAsync(1000);
+                    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
                 });
                 expect(onError).toHaveBeenCalledTimes(1);
                 // Two more failures inside the same window - a lifecycle flush and the
@@ -1395,7 +1395,7 @@ describe('DataProvider', () => {
                     ]);
                 });
                 await act(async () => {
-                    await vi.advanceTimersByTimeAsync(1000);
+                    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
                 });
                 expect(reported()).toEqual(['Disk full']);
                 // A different fault, moments later, is not a repeat of the first and is
@@ -1410,7 +1410,7 @@ describe('DataProvider', () => {
                     ]);
                 });
                 await act(async () => {
-                    await vi.advanceTimersByTimeAsync(1000);
+                    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
                 });
                 expect(reported()).toEqual(['Disk full', 'Template store offline']);
                 // The fault that keeps recurring is announced again once its own window has

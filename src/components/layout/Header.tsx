@@ -176,16 +176,21 @@ const Header = memo(
                             <button
                                 type="button"
                                 onClick={onSave}
-                                disabled={isSaving || !hasUnsavedChanges}
+                                disabled={isSaving}
                                 className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary focus-visible:ring-offset-1 focus-visible:ring-offset-app-bg
                                 ${
                                     hasUnsavedChanges
-                                        ? 'bg-app-primary text-white hover:bg-app-primary-hover shadow-md'
-                                        : 'bg-app-surface text-app-text-muted border border-app-border'
+                                        ? 'bg-app-primary text-white hover:bg-app-primary-hover shadow-md cursor-pointer'
+                                        : 'bg-app-surface text-app-text-muted border border-app-border hover:bg-app-surface-hover hover:text-app-text cursor-pointer'
                                 }
                                 ${isSaving ? 'opacity-70 cursor-wait' : ''}
                             `}
+                                title={
+                                    hasUnsavedChanges ? 'Save changes now (Ctrl+S)' : 'Save progress manually (Ctrl+S)'
+                                }
+                                aria-label={hasUnsavedChanges ? 'Save changes' : 'Save progress manually'}
                             >
+                                <Save size={12} aria-hidden="true" />
                                 {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save' : 'Saved'}
                             </button>
                             {lastSaved && !hasUnsavedChanges && (
@@ -204,15 +209,17 @@ const Header = memo(
                         <button
                             type="button"
                             onClick={onSave}
-                            disabled={isSaving || !hasUnsavedChanges}
+                            disabled={isSaving}
                             className={`shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary focus-visible:ring-offset-1 focus-visible:ring-offset-app-bg
                             ${
                                 hasUnsavedChanges
-                                    ? 'bg-app-primary text-white hover:bg-app-primary-hover shadow-md'
-                                    : 'bg-app-surface text-app-text-muted border border-app-border'
+                                    ? 'bg-app-primary text-white hover:bg-app-primary-hover shadow-md cursor-pointer'
+                                    : 'bg-app-surface text-app-text-muted border border-app-border hover:bg-app-surface-hover hover:text-app-text cursor-pointer'
                             }
                             ${isSaving ? 'opacity-70 cursor-wait' : ''}
                         `}
+                            title={hasUnsavedChanges ? 'Save changes now' : 'Save progress manually'}
+                            aria-label={hasUnsavedChanges ? 'Save changes' : 'Save progress manually'}
                         >
                             <Save size={11} aria-hidden="true" />
                             {isSaving ? '...' : hasUnsavedChanges ? 'Save' : 'Saved'}

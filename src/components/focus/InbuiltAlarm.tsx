@@ -42,9 +42,16 @@ export const isValidAlarmTime = (value: unknown): value is string =>
 const focusAlarmNativeId = (id: string): number => NotificationService.getNotificationId('focus-alarm', id);
 
 const createAlarmId = (): string => {
-    const randomUuid = globalThis.crypto?.randomUUID;
-    if (randomUuid) {
-        return `focus-${randomUuid()}`;
+    // `randomUUID` has to be called *on* `crypto`. Detaching it into a local
+    // loses the receiver and a real WebView throws "Illegal invocation", which
+    // took the whole Focus page down the moment an alarm was added.
+    try {
+        const cryptoApi = globalThis.crypto;
+        if (typeof cryptoApi?.randomUUID === 'function') {
+            return `focus-${cryptoApi.randomUUID()}`;
+        }
+    } catch {
+        // Fall through to the sequence-based id.
     }
     alarmSequence += 1;
     return `focus-${Date.now().toString(36)}-${alarmSequence.toString(36)}`;

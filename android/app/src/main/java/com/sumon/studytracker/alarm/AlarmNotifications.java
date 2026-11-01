@@ -50,11 +50,11 @@ final class AlarmNotifications {
     private static final String LOG_TAG = "AlarmNotifications";
 
     /**
-     * The pattern handed to {@code setVibrate} to keep the notification itself silent. Sharing
-     * one zero-length array is safe precisely because there is nothing in it to mutate - unlike
-     * the alarm pattern, which has to be copied per caller.
+     * How long an unattended ringing notification may keep sounding before the system
+     * withdraws it. The sound is insistent (it loops until the notification goes away), so an
+     * alarm nobody answers must still end eventually.
      */
-    private static final long[] NO_VIBRATION = new long[0];
+    static final long RING_TIMEOUT_MILLIS = 5L * 60L * 1000L;
 
     private AlarmNotifications() {
     }
@@ -103,21 +103,21 @@ final class AlarmNotifications {
     }
 
     /**
-     * Whether the ringing notification should make its own sound.
+     * Whether the ringing notification should make its own sound. It always does.
      *
-     * <p>{@link AlarmActivity} plays the alarm loop from the moment it starts, and the channel
-     * sound plays from the moment the notification is posted, so leaving both on means two
-     * overlapping alarms for as long as the hand-off takes. Once the full-screen intent is
-     * available the activity is what the user ends up looking at, and the notification's
-     * lifetime is the hand-off window, so the activity is the only sound worth keeping.
+     * <p>A full-screen intent only opens {@link AlarmActivity} while the device is locked or
+     * the screen is off. While the phone is in use the platform downgrades it to a heads-up
+     * notification and the activity never starts, so a notification that was muted on the
+     * strength of the grant produced a completely silent alarm exactly when the user was
+     * holding the phone. The notification is cancelled the moment the activity takes over
+     * (see {@link AlarmActivity}), so the overlap on the path where the activity does start is
+     * the hand-off window and nothing longer.
      *
-     * <p>In the degraded mode there is no guarantee the activity ever starts - a background
-     * activity launch is dropped on API 29+ - so the notification is the only thing that can
-     * make noise, and taking the sound away would leave a silent alarm for a user who never
-     * taps the shade entry.
+     * <p>The parameters are kept so the call sites and the rule's tests still describe every
+     * API level and grant state the answer has to hold for.
      */
     static boolean shouldSoundWithNotification(int sdkInt, boolean canUseFullScreenIntent) {
-        return !allowsFullScreenIntent(sdkInt, canUseFullScreenIntent);
+        return true;
     }
 
     /**
@@ -199,13 +199,11 @@ final class AlarmNotifications {
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setAutoCancel(false)
                     .setContentIntent(contentIntent)
-                    // AlarmActivity drives the vibrator and the MediaPlayer from the moment it
-                    // takes the alarm over. Letting the channel buzz and ring as well would
-                    // double the pulse for as long as the hand-off takes, which on the
-                    // full-screen-intent path is the entire lifetime of the notification. An
-                    // empty pattern is the documented per-notification way to say "no
-                    // vibration" while the channel keeps its own setting.
-                    .setVibrate(NO_VIBRATION);
+                    // The channel's alarm-stream sound and vibration are left on: when the
+                    // device is in use the full-screen intent degrades to a heads-up entry and
+                    // this notification is the whole alarm. AlarmActivity cancels it as soon
+                    // as it starts, which also ends the sound.
+                    .setTimeoutAfter(RING_TIMEOUT_MILLIS);
 
             boolean canUseFullScreenIntent = Build.VERSION.SDK_INT >= FULL_SCREEN_INTENT_GATE
                     && manager.canUseFullScreenIntent();
@@ -218,18 +216,17 @@ final class AlarmNotifications {
                 // activity, and reusing the same token also keeps the two in step when the
                 // activity is relaunched by CLEAR_TOP.
                 builder.setFullScreenIntent(contentIntent, true);
-                // The activity is guaranteed to start over the lock screen here, so it owns the
-                // sound; muting this notification removes the overlap. In the degraded branch
-                // below the notification keeps the channel sound, because it may be the only
-                // thing that makes any noise at all.
-                builder.setSilent(true);
             }
             builder.setOngoing(
                     isStickyAlarmNotification(Build.VERSION.SDK_INT, canUseFullScreenIntent)
             );
 
+            Notification notification = builder.build();
+            // Loop the channel sound until the alarm is answered, like an alarm clock does,
+            // instead of a single chime.
+            notification.flags |= Notification.FLAG_INSISTENT;
             NotificationManagerCompat.from(applicationContext)
-                    .notify(tagFor(alarmId), NOTIFICATION_ID, builder.build());
+                    .notify(tagFor(alarmId), NOTIFICATION_ID, notification);
         } catch (Exception exception) {
             // NotificationManagerCompat swallows the SecurityException on API 33+ when
             // POST_NOTIFICATIONS is denied, so a missing runtime grant is a silent no-op

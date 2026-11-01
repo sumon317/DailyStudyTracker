@@ -82,14 +82,15 @@ public class AlarmNotificationsTest {
     }
 
     @Test
-    public void theNotificationStaysSilentOnlyWhenTheActivityIsGuaranteedToTakeOver() {
-        // AlarmActivity plays the alarm loop from the moment it starts, so on the path where it
-        // definitely launches the notification must not add a second, overlapping ring.
-        assertFalse(AlarmNotifications.shouldSoundWithNotification(API_24, false));
-        assertFalse(AlarmNotifications.shouldSoundWithNotification(API_31, false));
-        assertFalse(AlarmNotifications.shouldSoundWithNotification(API_33, false));
-        assertFalse(AlarmNotifications.shouldSoundWithNotification(API_34, true));
-        assertFalse(AlarmNotifications.shouldSoundWithNotification(API_36, true));
+    public void theNotificationAlwaysSoundsBecauseTheFullScreenIntentMayOnlyHeadsUp() {
+        // A full-screen intent only opens the activity while the device is locked; in use, it
+        // degrades to a heads-up entry and the activity never starts. Muting the notification
+        // on the strength of the grant therefore produced a silent alarm on an unlocked phone.
+        assertTrue(AlarmNotifications.shouldSoundWithNotification(API_24, false));
+        assertTrue(AlarmNotifications.shouldSoundWithNotification(API_31, false));
+        assertTrue(AlarmNotifications.shouldSoundWithNotification(API_33, false));
+        assertTrue(AlarmNotifications.shouldSoundWithNotification(API_34, true));
+        assertTrue(AlarmNotifications.shouldSoundWithNotification(API_36, true));
     }
 
     @Test

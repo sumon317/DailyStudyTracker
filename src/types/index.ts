@@ -289,10 +289,14 @@ export interface ExportData {
 // Component Prop Types
 // ---------------------------------------------------------------------------
 
+export type AlarmPermissionKey = 'notifications' | 'exactAlarm' | 'fullScreenIntent';
+
 export interface AlarmPermissionModalProps {
     isOpen: boolean;
     onClose: () => void;
     onOpenSettings: () => void;
+    /** The grants still missing, in the order they will be asked for. */
+    missing?: readonly AlarmPermissionKey[];
 }
 
 export interface ChecklistProps {

@@ -1,13 +1,20 @@
 package com.sumon.studytracker.alarm;
 
 import android.app.AlarmManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.util.Log;
 
+import androidx.core.app.NotificationManagerCompat;
+
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -231,6 +238,129 @@ public class NativeAlarmPlugin extends Plugin {
             logFailure("Reconciling alarms", exception);
             call.reject("Unable to reconcile alarms");
         }
+    }
+
+    /**
+     * Reports, straight from the platform, the three grants a real alarm depends on:
+     * notifications (the ringing notification and the full-screen fallback are posted through
+     * it), exact alarms (so {@code setAlarmClock} is used instead of an inexact alarm), and the
+     * full-screen intent (so the alarm can take over the lock screen). Each answer is
+     * {@code "granted"} or {@code "denied"}.
+     */
+    @PluginMethod
+    public void checkAlarmPermissions(PluginCall call) {
+        try {
+            Context context = getContext();
+            JSObject result = new JSObject();
+            result.put("notifications", grantState(areNotificationsAllowed(context)));
+            result.put("exactAlarm", grantState(canScheduleExactAlarms(context)));
+            result.put("fullScreenIntent", grantState(canUseFullScreenIntent(context)));
+            call.resolve(result);
+        } catch (Exception exception) {
+            logFailure("Reading alarm permissions", exception);
+            call.reject("Unable to read alarm permissions");
+        }
+    }
+
+    /**
+     * Opens the system screen where the user can grant one of the alarm permissions:
+     * {@code "notifications"}, {@code "exactAlarm"} or {@code "fullScreenIntent"}.
+     */
+    @PluginMethod
+    public void openAlarmSettings(PluginCall call) {
+        String type = readString(call, "type", "");
+        Context context = getContext();
+        try {
+            Intent intent = settingsIntentFor(context, type);
+            if (intent == null) {
+                call.reject("Unknown alarm permission");
+                return;
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                context.startActivity(intent);
+            } catch (Exception unavailable) {
+                // Some OEM builds omit the dedicated screen, and the app's own details page is
+                // always there.
+                Intent fallback = new Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.getPackageName(), null)
+                );
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(fallback);
+            }
+            call.resolve();
+        } catch (Exception exception) {
+            logFailure("Opening alarm settings", exception);
+            call.reject("Unable to open the settings screen");
+        }
+    }
+
+    private static Intent settingsIntentFor(Context context, String type) {
+        Uri packageUri = Uri.fromParts("package", context.getPackageName(), null);
+        if ("notifications".equals(type)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                return new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+            }
+            return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri);
+        }
+        if ("exactAlarm".equals(type)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                return new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, packageUri);
+            }
+            return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri);
+        }
+        if ("fullScreenIntent".equals(type)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                return new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, packageUri);
+            }
+            return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri);
+        }
+        return null;
+    }
+
+    private static String grantState(boolean granted) {
+        return granted ? "granted" : "denied";
+    }
+
+    /**
+     * Notifications count as allowed only when the app-level switch is on <em>and</em> the alarm
+     * channel, if it already exists, has not been silenced by the user: a channel set to
+     * {@code IMPORTANCE_NONE} swallows the ringing notification just as surely.
+     */
+    private static boolean areNotificationsAllowed(Context context) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager manager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                NotificationChannel channel = manager.getNotificationChannel(AlarmNotifications.CHANNEL_ID);
+                if (channel != null && channel.getImportance() == NotificationManager.IMPORTANCE_NONE) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean canScheduleExactAlarms(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return true;
+        }
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        return alarmManager != null && alarmManager.canScheduleExactAlarms();
+    }
+
+    private static boolean canUseFullScreenIntent(Context context) {
+        if (Build.VERSION.SDK_INT < AlarmNotifications.FULL_SCREEN_INTENT_GATE) {
+            return true;
+        }
+        NotificationManager manager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        return manager != null && manager.canUseFullScreenIntent();
     }
 
     static void reconcilePersistedAlarms(Context context) throws Exception {

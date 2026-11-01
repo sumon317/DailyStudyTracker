@@ -19,6 +19,11 @@ import { useData } from '../providers/DataProvider';
 import { useToast } from '../providers/ToastProvider';
 import type { AlarmAudioController } from '../services/alarmAudio';
 import { createAlarmAudio } from '../services/alarmAudio';
+import {
+    getMissingAlarmPermissions,
+    orderAlarmPermissions,
+    requestAlarmPermission,
+} from '../services/alarmPermissions';
 import type {
     ExactAlarmState,
     SessionNotificationScheduleResult,
@@ -28,7 +33,7 @@ import type {
 import { NotificationService } from '../services/notificationService';
 import { subscribeToPersistenceErrors, subscribeToPersistenceRecovered } from '../services/persistenceEvents';
 import { checkForUpdate } from '../services/updateService';
-import type { UpdateResult } from '../types';
+import type { AlarmPermissionKey, UpdateResult } from '../types';
 
 interface NotificationReconcileInput {
     subjectNotificationDefinitions: SubjectNotificationDefinition[];
@@ -61,7 +66,7 @@ const RECONCILE_NOTICE_COOLDOWN_MS = 5 * 60 * 1000;
  * for good is announced once per flush cycle rather than once per flush. Exported
  * so the tests measure the real window instead of restating the number.
  */
-export const PERSISTENCE_NOTICE_COOLDOWN_MS = 10_000;
+export const PERSISTENCE_NOTICE_COOLDOWN_MS = 5_000;
 
 // `1 day record` and `1 days` are both wrong, and a count that is read back to
 // the user as a success message has to agree with the file it describes.
@@ -173,6 +178,7 @@ function App() {
     const [globalAlarmSource, setGlobalAlarmSource] = useState<string | null>(null);
     const globalAudioRef = useRef<AlarmAudioController | null>(null);
     const [showAlarmPermissionModal, setShowAlarmPermissionModal] = useState(false);
+    const [missingAlarmPermissions, setMissingAlarmPermissions] = useState<AlarmPermissionKey[]>([]);
     const [updateInfo, setUpdateInfo] = useState<UpdateResult | null>(null);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -624,9 +630,18 @@ function App() {
                 state = 'unreadable';
             }
             requestNotificationReconcile(latestReconcileInputRef.current);
-            if (state !== 'denied' || !isAlarmPermissionPromptDue()) {
+            // The platform's own read of notifications and the full-screen
+            // intent, which a real alarm needs on top of the exact-alarm grant.
+            // Empty off Android and when the read fails, so it never prompts on
+            // a guess.
+            const missing = new Set<AlarmPermissionKey>(await getMissingAlarmPermissions());
+            if (state === 'denied') {
+                missing.add('exactAlarm');
+            }
+            if (missing.size === 0 || !isAlarmPermissionPromptDue()) {
                 return;
             }
+            setMissingAlarmPermissions(orderAlarmPermissions(missing));
             // Deliberately *not* gated on the teardown flag below. React
             // StrictMode (used by `main.tsx`) re-runs effects on the same
             // instance, so the first pass - the one that actually read the
@@ -753,6 +768,17 @@ function App() {
         }
     }, [saveData, showToast]);
 
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                void handleSave();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleSave]);
+
     const handleDownloadPDF = useCallback(async () => {
         try {
             await downloadPDF();
@@ -849,13 +875,25 @@ function App() {
             {/* Alarm Permission Modal */}
             <AlarmPermissionModal
                 isOpen={showAlarmPermissionModal}
+                missing={missingAlarmPermissions}
                 onClose={() => {
                     markAlarmPermissionPrompted();
                     setShowAlarmPermissionModal(false);
                 }}
                 onOpenSettings={() => {
-                    markAlarmPermissionPrompted();
-                    NotificationService.openExactAlarmSettings();
+                    // One grant per tap, in the order the dialog lists them. The
+                    // cooldown is only stamped on the last one: stamping on the
+                    // first would hide the rest for a day, and returning from the
+                    // system screen re-reads what is still missing.
+                    const [next, ...remaining] = missingAlarmPermissions;
+                    if (remaining.length === 0) {
+                        markAlarmPermissionPrompted();
+                    }
+                    if (next === undefined || next === 'exactAlarm') {
+                        void NotificationService.openExactAlarmSettings();
+                    } else {
+                        void requestAlarmPermission(next);
+                    }
                     setShowAlarmPermissionModal(false);
                 }}
             />

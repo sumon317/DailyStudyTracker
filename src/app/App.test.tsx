@@ -1620,6 +1620,33 @@ describe('Daily Study Tracker App', () => {
 
             expect(await screen.findAllByText('Disk full')).toHaveLength(2);
         });
+
+        it('saves manually when the save button in the header is clicked', async () => {
+            const user = createUser();
+            renderApp();
+            await settle();
+
+            const saveButtons = screen.getAllByRole('button', { name: /Save/i });
+            expect(saveButtons.length).toBeGreaterThan(0);
+            const saveButton = saveButtons[0];
+            if (!saveButton) {
+                throw new Error('Expected a save button in the header');
+            }
+            await user.click(saveButton);
+
+            expect(await screen.findByText('Progress saved!')).toBeInTheDocument();
+        });
+
+        it('saves manually when Ctrl+S is pressed', async () => {
+            renderApp();
+            await settle();
+
+            await act(async () => {
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true }));
+            });
+
+            expect(await screen.findByText('Progress saved!')).toBeInTheDocument();
+        });
     });
 
     describe('update flow', () => {

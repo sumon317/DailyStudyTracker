@@ -25,8 +25,8 @@ import type {
 } from '../types';
 import { getTodayLocalDate, isValidDateKey, parseLocalDate } from '../utils/dateUtils';
 
-const AUTOSAVE_INTERVAL_MS = 10000;
-const AUTOSAVE_DEBOUNCE_MS = 1000;
+export const AUTOSAVE_INTERVAL_MS = 5000;
+export const AUTOSAVE_DEBOUNCE_MS = 1000;
 /**
  * Upper bound on the passes a single flush may take before giving up. One pass is the normal
  * case; the bound only exists so an edit that keeps landing during a save cannot loop forever.

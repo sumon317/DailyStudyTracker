@@ -24,7 +24,15 @@ export interface NativeAlarmPlugin {
     syncAlarms(options: { alarms: NativeAlarmDefinition[] }): Promise<void>;
     /** Re-arms the persisted store, e.g. after resume or a permission change. */
     reconcileAlarms(): Promise<void>;
+    /** The platform's own answer for the grants a real alarm needs. */
+    checkAlarmPermissions(): Promise<NativeAlarmPermissionStatus>;
+    /** Opens the system screen where `type` can be granted. */
+    openAlarmSettings(options: { type: NativeAlarmPermissionKey }): Promise<void>;
 }
+
+export type NativeAlarmPermissionKey = 'notifications' | 'exactAlarm' | 'fullScreenIntent';
+
+export type NativeAlarmPermissionStatus = Record<NativeAlarmPermissionKey, 'granted' | 'denied'>;
 
 export const isValidNativeAlarmId = (value: unknown): value is number =>
     typeof value === 'number' &&
