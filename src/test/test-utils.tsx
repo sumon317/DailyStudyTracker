@@ -64,7 +64,7 @@ export function TestWrapper({ children, initialEntries }: TestWrapperProps) {
  */
 const ROUTE_MODULES: Record<string, () => Promise<unknown>> = {
     tracker: () => import('../pages/TrackerPage'),
-    review: () => import('../pages/ReviewPage'),
+    notes: () => import('../pages/NotesPage'),
     stats: () => import('../pages/StatsPage'),
     todo: () => import('../pages/TodoPage'),
     focus: () => import('../pages/FocusPage'),
@@ -266,7 +266,7 @@ export async function waitForRoute(heading?: string): Promise<boolean> {
 export const routeHeadings = {
     tracker: 'Study tracker',
     todo: 'Tasks',
-    review: 'Review',
+    notes: 'Notes',
     stats: 'Study statistics',
     focus: 'Focus',
 } as const;

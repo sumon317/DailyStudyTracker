@@ -106,6 +106,7 @@ const flush = async () => {
 
 describe('CountdownTimer', () => {
     beforeEach(() => {
+        localStorage.clear();
         mocks.native = true;
         vi.useFakeTimers();
         vi.clearAllMocks();
@@ -217,15 +218,31 @@ describe('CountdownTimer', () => {
         expect(screen.getByLabelText('HRS')).toHaveAttribute('aria-invalid', 'true');
     });
 
-    it('applies a valid edited duration', async () => {
-        render(<CountdownTimer globalAlarmSource={null} stopGlobalAlarm={vi.fn()} />);
-        fireEvent.click(screen.getByTitle('Click to edit time'));
+    it('applies a valid edited duration and persists it across remounts', async () => {
+        const { unmount } = render(<CountdownTimer globalAlarmSource={null} stopGlobalAlarm={vi.fn()} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Edit timer duration' }));
+        fireEvent.change(screen.getByLabelText('MIN'), { target: { value: '' } });
+        expect(screen.getByLabelText('MIN')).toHaveValue('');
         fireEvent.change(screen.getByLabelText('MIN'), { target: { value: '5' } });
         fireEvent.click(screen.getByRole('button', { name: /set timer/i }));
         await flush();
 
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(screen.getByText('05:00')).toBeInTheDocument();
+
+        unmount();
+        render(<CountdownTimer globalAlarmSource={null} stopGlobalAlarm={vi.fn()} />);
+        expect(screen.getByText('05:00')).toBeInTheDocument();
+    });
+
+    it('supports quick preset buttons and Enter key in the duration editor', async () => {
+        render(<CountdownTimer globalAlarmSource={null} stopGlobalAlarm={vi.fn()} />);
+        fireEvent.click(screen.getByTitle('Click to edit time'));
+        fireEvent.click(screen.getByRole('button', { name: '45m' }));
+        fireEvent.keyDown(screen.getByLabelText('MIN'), { key: 'Enter' });
+        await flush();
+
+        expect(screen.getByText('45:00')).toBeInTheDocument();
     });
 
     it('does not stop a foreground service or a keep-awake it never started on mount', async () => {

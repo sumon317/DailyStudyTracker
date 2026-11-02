@@ -48,6 +48,56 @@ export interface Todo {
     reminder: boolean;
 }
 
+export type NoteType = 'text' | 'list';
+
+export type NoteColor =
+    | 'default'
+    | 'coral'
+    | 'orange'
+    | 'sand'
+    | 'mint'
+    | 'sage'
+    | 'fog'
+    | 'storm'
+    | 'dusk'
+    | 'blossom'
+    | 'clay'
+    | 'chalk';
+
+export type NoteFolder = 'notes' | 'archived' | 'trash';
+
+export type NoteSortField = 'updatedAt' | 'createdAt' | 'title';
+
+export type NoteSortDirection = 'asc' | 'desc';
+
+export type NoteViewMode = 'grid' | 'list';
+
+export interface NoteTaskItem {
+    id: string;
+    text: string;
+    checked: boolean;
+    /** Indented subtask belonging to the nearest preceding top-level task item. */
+    isChild: boolean;
+}
+
+export interface Note {
+    id: string;
+    type: NoteType;
+    title: string;
+    /** Rich Markdown-lite body used when `type === 'text'`. */
+    body: string;
+    /** Task items with subtask hierarchy used when `type === 'list'`. */
+    items: NoteTaskItem[];
+    color: NoteColor;
+    labels: string[];
+    pinned: boolean;
+    folder: NoteFolder;
+    /** When enabled on a list note, checked items (and their subtasks) sort into the bottom section. */
+    autoSortChecked: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface DayData {
     date: string;
     updatedAt: string;
@@ -215,6 +265,7 @@ export interface DataProviderValue {
     dayRating: string;
     errors: ErrorLogEntry[];
     todos: Todo[];
+    notes?: Note[];
     /** True while any change is not yet in the store. */
     hasUnsavedChanges: boolean;
     isSaving: boolean;
@@ -233,6 +284,7 @@ export interface DataProviderValue {
     setDayRating: (val: string) => void;
     setErrors: DataValueSetter<ErrorLogEntry[]>;
     setTodos: DataValueSetter<Todo[]>;
+    setNotes?: DataValueSetter<Note[]>;
     /**
      * Persists every pending change, sharing its write with an already running flush. Rejects
      * if the write failed (leaving the data dirty) or if an edit kept landing through every
@@ -283,6 +335,7 @@ export interface ExportData {
     dayRating: string;
     errors: ErrorLogEntry[];
     todos: Todo[];
+    notes?: Note[];
 }
 
 // ---------------------------------------------------------------------------
@@ -299,34 +352,10 @@ export interface AlarmPermissionModalProps {
     missing?: readonly AlarmPermissionKey[];
 }
 
-export interface ChecklistProps {
-    items: ChecklistItem[];
-    setItems: DataValueSetter<ChecklistItem[]>;
-}
-
-export interface ChecklistItemProps {
-    item: ChecklistItem;
-    onToggle: () => void;
-    onUpdateLabel: (label: string) => void;
-    onRemove: () => void;
-}
-
 export interface DatePickerProps {
     date: string;
     setDate: (newDate: string) => void | Promise<void>;
     compact?: boolean;
-}
-
-export interface ErrorLogProps {
-    errors: ErrorLogEntry[];
-    setErrors: DataValueSetter<ErrorLogEntry[]>;
-}
-
-export interface ErrorLogItemProps {
-    error: ErrorLogEntry;
-    index: number;
-    onUpdate: (field: keyof ErrorLogEntry, value: string) => void;
-    onRemove: () => void;
 }
 
 /**
@@ -344,26 +373,6 @@ export type InbuiltAlarmProps = Record<string, never>;
 
 export interface LayoutProps {
     children: ReactNode;
-}
-
-export interface QualityCheckProps {
-    checks: QualityCheckItem[];
-    setChecks: DataValueSetter<QualityCheckItem[]>;
-    rating: string;
-    setRating: (val: string) => void;
-}
-
-export interface QualityCheckItemCompProps {
-    check: QualityCheckItem;
-    onToggle: () => void;
-    onUpdateLabel: (label: string) => void;
-    onRemove: () => void;
-}
-
-export interface RatingOptionProps {
-    option: string;
-    isSelected: boolean;
-    onSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export interface StudyChartsProps {
@@ -429,15 +438,9 @@ export interface TrackerPageProps {
     setSubjects: DataValueSetter<Subject[]>;
 }
 
-export interface ReviewPageProps {
-    checklistItems: ChecklistItem[];
-    setChecklistItems: DataValueSetter<ChecklistItem[]>;
-    qualityChecks: QualityCheckItem[];
-    setQualityChecks: DataValueSetter<QualityCheckItem[]>;
-    dayRating: string;
-    setDayRating: (val: string) => void;
-    errors: ErrorLogEntry[];
-    setErrors: DataValueSetter<ErrorLogEntry[]>;
+export interface NotesPageProps {
+    notes?: Note[];
+    setNotes?: DataValueSetter<Note[]>;
 }
 
 export interface StatsPageProps {

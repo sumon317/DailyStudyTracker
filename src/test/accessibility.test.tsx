@@ -6,10 +6,9 @@ import StudyCharts from '../components/charts/StudyCharts';
 import WeeklyStats from '../components/charts/WeeklyStats';
 import AlarmPermissionModal from '../components/dialogs/AlarmPermissionModal';
 import Stopwatch from '../components/focus/Stopwatch';
-import Checklist from '../components/review/Checklist';
-import ErrorLog from '../components/review/ErrorLog';
 import DatePicker from '../components/shared/DatePicker';
 import TimePicker from '../components/shared/TimePicker';
+import NotesPage from '../pages/NotesPage';
 
 vi.mock('../services/storage', () => ({
     exportAllData: vi.fn().mockResolvedValue([
@@ -91,35 +90,16 @@ describe('scoped accessibility behavior', () => {
         expect(opener).toHaveFocus();
     });
 
-    it('associates checklist controls and exposes chart summaries, progressbars, and a table', () => {
-        render(<Checklist items={[{ id: 4, label: 'Read accounts notes', checked: false }]} setItems={vi.fn()} />);
-        expect(
-            screen.getByRole('checkbox', { name: 'Mark checklist “Read accounts notes” as done' }),
-        ).toBeInTheDocument();
-        expect(screen.getByRole('textbox', { name: 'Checklist objective 1' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Remove checklist “Read accounts notes”' })).toBeInTheDocument();
+    it('exposes chart summaries, progressbars, and a table alongside accessible notes controls', () => {
+        render(<NotesPage />);
+        expect(screen.getByRole('region', { name: 'Notes' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /New Note/i })).toBeInTheDocument();
+        expect(screen.getByRole('searchbox', { name: 'Search notes' })).toBeInTheDocument();
 
         render(<StudyCharts subjects={subjects} />);
         expect(screen.getByText(/75 minutes studied out of 150 minutes planned/i)).toBeInTheDocument();
         expect(screen.getAllByRole('progressbar')).toHaveLength(2);
         expect(screen.getByRole('table', { name: 'Study metrics by subject' })).toBeInTheDocument();
-    });
-
-    it('gives duplicate checklist rows distinct, position-scoped names', () => {
-        render(
-            <Checklist
-                items={[
-                    { id: 1, label: 'Same', checked: false },
-                    { id: 2, label: 'Same', checked: false },
-                ]}
-                setItems={vi.fn()}
-            />,
-        );
-
-        const names = screen.getAllByRole('textbox').map((field) => field.getAttribute('id'));
-        expect(new Set(names).size).toBe(2);
-        expect(screen.getByRole('textbox', { name: 'Checklist objective 1' })).toBeInTheDocument();
-        expect(screen.getByRole('textbox', { name: 'Checklist objective 2' })).toBeInTheDocument();
     });
 
     it('does not let Tab strand an open DatePicker calendar', async () => {
@@ -172,24 +152,6 @@ describe('scoped accessibility behavior', () => {
         await user.keyboard('{Escape}');
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(trigger).toHaveFocus();
-    });
-
-    it('keeps ErrorLog field IDs tied to stable record IDs', () => {
-        render(
-            <ErrorLog
-                errors={[
-                    { id: 101, question: 'same', mistake: 'same', correctLogic: 'same' },
-                    { id: 202, question: 'same', mistake: 'same', correctLogic: 'same' },
-                ]}
-                setErrors={vi.fn()}
-            />,
-        );
-
-        const questionFields = screen.getAllByLabelText('Question');
-        expect(questionFields[0]).toHaveAttribute('id', 'error-question-101');
-        expect(questionFields[1]).toHaveAttribute('id', 'error-question-202');
-        fireEvent.change(questionFields[0] as HTMLTextAreaElement, { target: { value: 'changed' } });
-        expect(questionFields[0]).toHaveAttribute('id', 'error-question-101');
     });
 
     it('gives weekly statistics a textual chart summary and table', async () => {

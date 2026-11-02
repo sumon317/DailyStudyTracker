@@ -1,13 +1,13 @@
 # Daily Study Tracker
 
-Daily Study Tracker is a local-first React application for recording study sessions, checklist work, mistakes, todos, focus time, and progress statistics. It runs as a web app, an installable PWA, and a Capacitor Android project.
+Daily Study Tracker is a local-first React application for recording study sessions, rich study notes and task lists, todos, focus time, and progress statistics. It runs as a web app, an installable PWA, and a Capacitor Android project.
 
 There is no account system or cloud database. Data stays in the current browser or device unless the user exports a backup.
 
 ## Features
 
 - Daily subjects with planned and actual study time, KPI status, and reminders
-- Recurring subjects, checklists, quality checks, and an error log
+- Recurring subjects and an inbuilt NotallyX-style Notes workspace (rich text notes, task lists with subtasks, pinning, 12 colors, labels, archive, and trash)
 - Daily, weekly, streak, and completion statistics
 - Todos, stopwatch, and configurable focus countdown
 - PDF and Markdown exports

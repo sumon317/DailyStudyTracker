@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { announceDataImported } from '../services/dataImportEvents';
+import { readStoredNotes, writeStoredNotes } from '../services/notesService';
 import { announcePersistenceError, announcePersistenceRecovered } from '../services/persistenceEvents';
 import {
     downloadBackup,
@@ -18,6 +19,7 @@ import type {
     DataProviderValue,
     DayData,
     ErrorLogEntry,
+    Note,
     QualityCheckItem,
     RecurringSubject,
     Subject,
@@ -280,6 +282,7 @@ export default function DataProvider({ children }: DataProviderProps) {
         { id: 1, question: '', mistake: '', correctLogic: '' },
     ]);
     const [todos, setTodosState] = useState<Todo[]>([]);
+    const [notes, setNotesState] = useState<Note[]>(() => readStoredNotes());
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -298,6 +301,7 @@ export default function DataProvider({ children }: DataProviderProps) {
     const dayRatingRef = useRef(dayRating);
     const errorsRef = useRef(errors);
     const todosRef = useRef(todos);
+    const notesRef = useRef(notes);
     const mountedRef = useRef(true);
     const dayRevisionRef = useRef(0);
     const todoRevisionRef = useRef(0);
@@ -877,6 +881,18 @@ export default function DataProvider({ children }: DataProviderProps) {
         [markTodoDirty, scheduleAutosave],
     );
 
+    const setNotesWrapped = useCallback((updater: Note[] | ((prev: Note[]) => Note[])) => {
+        const nextValue = typeof updater === 'function' ? updater(notesRef.current) : updater;
+        const nextNotes = nextValue.map((note) => ({
+            ...note,
+            items: note.items.map((item) => ({ ...item })),
+            labels: [...note.labels],
+        }));
+        notesRef.current = nextNotes;
+        setNotesState(nextNotes);
+        writeStoredNotes(nextNotes);
+    }, []);
+
     const setDayRating = useCallback(
         (value: string) => {
             dayRatingRef.current = value;
@@ -1000,6 +1016,7 @@ export default function DataProvider({ children }: DataProviderProps) {
         dayRating,
         errors,
         todos,
+        notes,
         hasUnsavedChanges,
         isSaving,
         lastSaved,
@@ -1010,6 +1027,7 @@ export default function DataProvider({ children }: DataProviderProps) {
         setDayRating,
         setErrors: setErrorsWrapped,
         setTodos: setTodosWrapped,
+        setNotes: setNotesWrapped,
         saveData: flushDirtyData,
         exportData,
         importData,

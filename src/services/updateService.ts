@@ -74,6 +74,8 @@ const API_PATH = `/repos/${GITHUB_REPO}/releases/latest`;
 const RELEASE_HOST_PREFIXES: ReadonlyArray<{ host: string; pathPrefix: string }> = [
     { host: 'github.com', pathPrefix: `/${GITHUB_REPO}/releases/` },
     { host: 'release-assets.githubusercontent.com', pathPrefix: '/github-production-release-asset/' },
+    { host: 'release-assets.githubusercontent.com', pathPrefix: '/github-production-release-asset-' },
+    { host: 'objects.githubusercontent.com', pathPrefix: '/github-production-release-asset-' },
 ];
 
 const NOT_APK_ERROR = 'Only APK updates can be installed automatically.';
@@ -95,6 +97,37 @@ const NOT_ANDROID_ERROR = 'Automatic updates are only available in the Android a
  * timeout instead.
  */
 const ABANDONED_ERROR = 'The update transfer was abandoned after it timed out.';
+
+const SAFE_NATIVE_ERRORS: ReadonlySet<string> = new Set([
+    'The update URL is not an approved HTTPS GitHub URL.',
+    DIGEST_REQUIRED_ERROR,
+    TOO_LARGE_ERROR,
+    SIZE_MISMATCH_ERROR,
+    HASH_MISMATCH_ERROR,
+    EMPTY_RESPONSE_ERROR,
+    NOT_AN_APK_ERROR,
+    'The update redirected to an unapproved host.',
+    'The update response has an invalid size.',
+    TIMEOUT_ERROR,
+    'APK could not be read as an Android package',
+    'APK package does not match this application',
+    'APK version is older than the installed version',
+    'APK is not signed',
+    "APK is not signed by this application's signer",
+    'No application can install this package',
+]);
+
+const isSafeNativeErrorMessage = (message: string): boolean =>
+    SAFE_NATIVE_ERRORS.has(message) || /^Failed to download update \(HTTP \d{3}\)\.$/.test(message);
+
+const isUnimplementedBridgeError = (error: unknown): boolean => {
+    if (!isRecord(error)) {
+        return false;
+    }
+    const code = typeof error.code === 'string' ? error.code : '';
+    const message = typeof error.message === 'string' ? error.message : '';
+    return code === 'UNIMPLEMENTED' || /not implemented/i.test(message);
+};
 
 export type UpdateUrlKind = 'api' | 'release';
 
@@ -1247,8 +1280,116 @@ export const downloadAndInstallUpdate = async (
         }
     };
 
+    const installVerifiedApk = async (): Promise<UpdateInstallResult> => {
+        ensureActive();
+        const permission = await NativeAppUpdate.checkInstallPermission();
+        if (!isInstallPermissionGranted(permission)) {
+            // The verified APK is deliberately left in place. The dialog offers a retry the
+            // moment the grant comes back, and re-downloading tens of megabytes to satisfy a
+            // permission the user has not granted yet would be the worse trade.
+            return {
+                success: false,
+                error: INSTALL_PERMISSION_ERROR,
+                assetName,
+                sha256: verifiedSha256,
+                size: downloadedSize,
+            };
+        }
+        onPhase('installing');
+        await NativeAppUpdate.installApk({ path: CACHE_FILE_NAME });
+        onPhase('success');
+        return { success: true, assetName, sha256: verifiedSha256, size: downloadedSize };
+    };
+
+    const runValidatedInstall = (): Promise<UpdateInstallResult> => {
+        // The request is finished, so the abort timer is disarmed rather than left pointing at a
+        // completed download; `withDeadline` alone owns the install budget from here.
+        if (timeoutId !== undefined) {
+            clearTimeout(timeoutId);
+            timeoutId = undefined;
+        }
+        return withDeadline(installVerifiedApk(), INSTALL_TIMEOUT_MS, () => {
+            timedOut = true;
+        });
+    };
+
     const transfer = async (): Promise<UpdateInstallResult> => {
         onPhase('downloading');
+
+        // Prefer the native Android download path whenever the bridge exposes `downloadApk`:
+        // Android WebView `fetch()` to `github.com/.../releases/download/...` is blocked by
+        // browser CORS because neither GitHub's 302 redirect nor the Azure/S3 asset host sends
+        // `Access-Control-Allow-Origin`. Downloading natively via `HttpsURLConnection` bypasses
+        // WebView CORS and streams directly to the app cache without base64 bridge overhead.
+        if (typeof NativeAppUpdate.downloadApk === 'function') {
+            armTimeout(DOWNLOAD_TIMEOUT_MS);
+            let progressHandle: { remove: () => Promise<void> } | undefined;
+            if (typeof NativeAppUpdate.addListener === 'function') {
+                try {
+                    progressHandle = await NativeAppUpdate.addListener('downloadProgress', (event) => {
+                        if (isRecord(event) && typeof event.progress === 'number' && Number.isFinite(event.progress)) {
+                            armTimeout(DOWNLOAD_TIMEOUT_MS);
+                            onProgress(Math.min(99, Math.max(0, Math.round(event.progress))));
+                        }
+                    });
+                } catch {
+                    progressHandle = undefined;
+                }
+            }
+            try {
+                const nativeResult = await NativeAppUpdate.downloadApk({
+                    url,
+                    sha256: expectedSha256,
+                    ...(expectedSize !== undefined ? { size: expectedSize } : {}),
+                    path: CACHE_FILE_NAME,
+                });
+                ensureActive();
+                if (!isPlainRecord(nativeResult)) {
+                    throw new Error('The verified APK could not be stored for installation.');
+                }
+                const reportedSize = nativeResult.size;
+                if (reportedSize !== undefined) {
+                    if (!validSize(reportedSize)) {
+                        return { success: false, error: 'The update response has an invalid size.', assetName };
+                    }
+                    if (reportedSize > MAX_UPDATE_SIZE_BYTES) {
+                        return { success: false, error: TOO_LARGE_ERROR, assetName, size: reportedSize };
+                    }
+                    if (expectedSize !== undefined && reportedSize !== expectedSize) {
+                        return { success: false, error: SIZE_MISMATCH_ERROR, assetName, size: reportedSize };
+                    }
+                    downloadedSize = reportedSize;
+                } else if (expectedSize !== undefined) {
+                    downloadedSize = expectedSize;
+                }
+                const reportedSha256 =
+                    nativeResult.sha256 !== undefined ? normalizeDigest(nativeResult.sha256) : expectedSha256;
+                if (!reportedSha256 || reportedSha256 !== expectedSha256) {
+                    return {
+                        success: false,
+                        error: HASH_MISMATCH_ERROR,
+                        assetName,
+                        sha256: reportedSha256,
+                        ...(downloadedSize > 0 ? { size: downloadedSize } : {}),
+                    };
+                }
+                verifiedSha256 = reportedSha256;
+                onProgress(100);
+                return await runValidatedInstall();
+            } catch (nativeError: unknown) {
+                if (!isUnimplementedBridgeError(nativeError)) {
+                    throw nativeError;
+                }
+                // Fall back to the web fetch + Filesystem stream when running against a bridge
+                // stub or older native shell that does not implement `downloadApk`.
+                armTimeout(REQUEST_TIMEOUT_MS);
+            } finally {
+                if (progressHandle) {
+                    void Promise.resolve(progressHandle.remove()).catch(() => undefined);
+                }
+            }
+        }
+
         const response = await fetch(url, requestInit);
         if (response.url && !isAllowedReleaseUrl(response.url)) {
             discardBody(response);
@@ -1372,38 +1513,7 @@ export const downloadAndInstallUpdate = async (
                 await discardStoredApk();
             }
         }
-        // From here the file on disk is complete and its digest matches the published one, so it
-        // is never deleted: the installer reads it through a FileProvider, and removing it during
-        // a slow install would abort an install that is already under way.
-        const installVerifiedApk = async (): Promise<UpdateInstallResult> => {
-            ensureActive();
-            const permission = await NativeAppUpdate.checkInstallPermission();
-            if (!isInstallPermissionGranted(permission)) {
-                // The verified APK is deliberately left in place. The dialog offers a retry the
-                // moment the grant comes back, and re-downloading tens of megabytes to satisfy a
-                // permission the user has not granted yet would be the worse trade.
-                return {
-                    success: false,
-                    error: INSTALL_PERMISSION_ERROR,
-                    assetName,
-                    sha256: verifiedSha256,
-                    size: downloadedSize,
-                };
-            }
-            onPhase('installing');
-            await NativeAppUpdate.installApk({ path: CACHE_FILE_NAME });
-            onPhase('success');
-            return { success: true, assetName, sha256: verifiedSha256, size: downloadedSize };
-        };
-        // The request is finished, so the abort timer is disarmed rather than left pointing at a
-        // completed download; `withDeadline` alone owns the install budget from here.
-        if (timeoutId !== undefined) {
-            clearTimeout(timeoutId);
-            timeoutId = undefined;
-        }
-        return withDeadline(installVerifiedApk(), INSTALL_TIMEOUT_MS, () => {
-            timedOut = true;
-        });
+        return runValidatedInstall();
     };
 
     try {
@@ -1420,8 +1530,15 @@ export const downloadAndInstallUpdate = async (
                   abandoned = true;
               });
     } catch (error: unknown) {
+        const rawMessage = isRecord(error) && typeof error.message === 'string' ? error.message : '';
         const failure =
-            timedOut || abandoned ? TIMEOUT_ERROR : isAbortError(error) ? INTERRUPTED_ERROR : GENERIC_FAILURE_ERROR;
+            timedOut || abandoned
+                ? TIMEOUT_ERROR
+                : isAbortError(error)
+                  ? INTERRUPTED_ERROR
+                  : isSafeNativeErrorMessage(rawMessage)
+                    ? rawMessage
+                    : GENERIC_FAILURE_ERROR;
         const result: UpdateInstallResult = { success: false, error: failure, assetName };
         if (verifiedSha256 !== undefined) {
             result.sha256 = verifiedSha256;

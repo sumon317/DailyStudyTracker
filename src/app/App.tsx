@@ -42,7 +42,7 @@ interface NotificationReconcileInput {
 }
 
 const TrackerPage = lazy(() => import('../pages/TrackerPage'));
-const ReviewPage = lazy(() => import('../pages/ReviewPage'));
+const NotesPage = lazy(() => import('../pages/NotesPage'));
 const StatsPage = lazy(() => import('../pages/StatsPage'));
 const TodoPage = lazy(() => import('../pages/TodoPage'));
 const FocusPage = lazy(() => import('../pages/FocusPage'));
@@ -153,17 +153,11 @@ function App() {
         loadedDate,
         isInitialized,
         subjects,
-        checklistItems,
-        qualityChecks,
-        dayRating,
-        errors,
         todos,
+        notes,
         setTodos,
+        setNotes,
         setSubjects,
-        setChecklistItems,
-        setQualityChecks,
-        setDayRating,
-        setErrors,
         hasUnsavedChanges,
         isSaving,
         lastSaved,
@@ -691,9 +685,8 @@ function App() {
     const handleCheckForUpdates = useCallback(async () => {
         setCheckingUpdate(true);
         try {
-            const ignoredVersion = readStorageFlag('ignoredUpdateVersion');
             const info = await checkForUpdate(true);
-            if (info.available && info.tag !== ignoredVersion) {
+            if (info.available) {
                 setUpdateInfo(info);
                 setShowUpdateModal(true);
                 showToast({ type: 'success', message: `Update found: ${info.tag}` });
@@ -998,28 +991,19 @@ function App() {
                                 }
                             />
                             <Route
-                                path="/review"
+                                path="/notes"
                                 element={
-                                    <ErrorBoundary key="route-review">
+                                    <ErrorBoundary key="route-notes">
                                         <Suspense
                                             fallback={
-                                                <RouteFallback label="Loading review">
+                                                <RouteFallback label="Loading notes">
                                                     <div className="space-y-4">
                                                         <SkeletonCard count={2} />
                                                     </div>
                                                 </RouteFallback>
                                             }
                                         >
-                                            <ReviewPage
-                                                checklistItems={checklistItems}
-                                                setChecklistItems={setChecklistItems}
-                                                qualityChecks={qualityChecks}
-                                                setQualityChecks={setQualityChecks}
-                                                dayRating={dayRating}
-                                                setDayRating={setDayRating}
-                                                errors={errors}
-                                                setErrors={setErrors}
-                                            />
+                                            <NotesPage notes={notes} setNotes={setNotes} />
                                         </Suspense>
                                     </ErrorBoundary>
                                 }

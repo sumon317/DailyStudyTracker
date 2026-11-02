@@ -2,8 +2,8 @@ import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, Pause, Play, RotateCcw, Timer, X } from 'lucide-react';
-import type { ChangeEvent, Dispatch, SetStateAction } from 'react';
+import { Check, ChevronDown, Pause, Pencil, Play, RotateCcw, Timer, X } from 'lucide-react';
+import type { ChangeEvent, Dispatch, KeyboardEvent as ReactKeyboardEvent, SetStateAction } from 'react';
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react';
 import NativeAlarm, { nativeAlarmRejectionReason } from '../../native/NativeAlarm';
 import type { AlarmAudioController } from '../../services/alarmAudio';
@@ -12,8 +12,34 @@ import { NotificationService, TIMER_NOTIFICATION_ID } from '../../services/notif
 import type { CountdownTimerProps } from '../../types';
 
 const DEFAULT_TIMER_SECONDS = 1800;
+const TIMER_DURATION_STORAGE_KEY = 'focus_timer_duration_seconds';
 const FOREGROUND_SERVICE_ID = 111;
 const TIMER_CARD_CONTENT_ID = 'focus-timer-content';
+const QUICK_PRESET_MINUTES = [15, 25, 30, 45, 60, 90] as const;
+
+const readStoredTimerSeconds = (): number => {
+    try {
+        const raw = localStorage.getItem(TIMER_DURATION_STORAGE_KEY);
+        if (!raw) {
+            return DEFAULT_TIMER_SECONDS;
+        }
+        const parsed = Number.parseInt(raw, 10);
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 86399) {
+            return parsed;
+        }
+        return DEFAULT_TIMER_SECONDS;
+    } catch {
+        return DEFAULT_TIMER_SECONDS;
+    }
+};
+
+const writeStoredTimerSeconds = (seconds: number): void => {
+    try {
+        localStorage.setItem(TIMER_DURATION_STORAGE_KEY, String(seconds));
+    } catch {
+        // Ignore storage write errors in restricted privacy modes
+    }
+};
 
 /**
  * The countdown completion alert and an app-level alarm are the same event seen
@@ -56,10 +82,19 @@ export const timerProgressPercent = (timeLeft: number, initialTime: number): num
     return Math.min(100, Math.max(0, (timeLeft / initialTime) * 100));
 };
 
+const parseField = (raw: string): number => {
+    const trimmed = raw.trim();
+    if (trimmed === '') {
+        return 0;
+    }
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+};
+
 const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTimerProps) => {
-    const [timeLeft, setTimeLeft] = useState(DEFAULT_TIMER_SECONDS);
+    const [initialTime, setInitialTime] = useState(readStoredTimerSeconds);
+    const [timeLeft, setTimeLeft] = useState(initialTime);
     const [isActive, setIsActive] = useState(false);
-    const [initialTime, setInitialTime] = useState(DEFAULT_TIMER_SECONDS);
     const [isEditing, setIsEditing] = useState(false);
     const [isOpen, setIsOpen] = useState(true);
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -70,9 +105,9 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
      */
     const [alarmWarning, setAlarmWarning] = useState<string | null>(null);
 
-    const [hoursInput, setHoursInput] = useState(0);
-    const [minutesInput, setMinutesInput] = useState(30);
-    const [secondsInput, setSecondsInput] = useState(0);
+    const [hoursInput, setHoursInput] = useState('0');
+    const [minutesInput, setMinutesInput] = useState('30');
+    const [secondsInput, setSecondsInput] = useState('0');
 
     const intervalRef = useRef<number | null>(null);
     const endTimeRef = useRef<number | null>(null);
@@ -496,26 +531,39 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
         const hours = Math.floor(timeLeft / 3600);
         const minutes = Math.floor((timeLeft % 3600) / 60);
         const seconds = timeLeft % 60;
-        setHoursInput(hours);
-        setMinutesInput(minutes);
-        setSecondsInput(seconds);
+        setHoursInput(String(hours));
+        setMinutesInput(String(minutes));
+        setSecondsInput(String(seconds));
         setValidationError(null);
         setIsEditing(true);
     }, [cancelTimerNotifications, stopAlarm, timeLeft]);
 
     const saveTime = useCallback(async () => {
-        const totalSeconds = validateTimerInput(hoursInput, minutesInput, secondsInput);
+        const hours = parseField(hoursInput);
+        const minutes = parseField(minutesInput);
+        const seconds = parseField(secondsInput);
+        const totalSeconds = validateTimerInput(hours, minutes, seconds);
         if (totalSeconds === null) {
             setValidationError('Enter a duration from 00:00:01 to 23:59:59.');
             return;
         }
         operationRef.current += 1;
         await cancelTimerNotifications();
+        writeStoredTimerSeconds(totalSeconds);
         setInitialTime(totalSeconds);
         setTimeLeft(totalSeconds);
         setValidationError(null);
         setIsEditing(false);
     }, [cancelTimerNotifications, hoursInput, minutesInput, secondsInput]);
+
+    const applyPresetMinutes = useCallback((totalMinutes: number) => {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        setHoursInput(String(hours));
+        setMinutesInput(String(minutes));
+        setSecondsInput('0');
+        setValidationError(null);
+    }, []);
 
     /**
      * Extending a running session moves the deadline, so the armed native alarm has
@@ -544,11 +592,20 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
         [isActive, scheduleTimerNotifications],
     );
 
-    const handleInputChange = (setter: Dispatch<SetStateAction<number>>) => (event: ChangeEvent<HTMLInputElement>) => {
-        const value = event.target.value;
-        const parsed = Number.parseInt(value, 10);
-        setter(Number.isFinite(parsed) ? Math.max(0, parsed) : 0);
+    const handleInputChange = (setter: Dispatch<SetStateAction<string>>) => (event: ChangeEvent<HTMLInputElement>) => {
+        const raw = event.target.value.replace(/\D/g, '').slice(0, 2);
+        setter(raw);
         setValidationError(null);
+    };
+
+    const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            void saveTime();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            setIsEditing(false);
+        }
     };
 
     const showLocalAlarmOverlay = isAlarmPlaying && !isForeignAlarmActive(globalAlarmSource);
@@ -650,13 +707,14 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                                     </label>
                                                     <input
                                                         id="timer-hrs"
-                                                        type="number"
+                                                        type="text"
                                                         inputMode="numeric"
                                                         value={hoursInput}
                                                         onChange={handleInputChange(setHoursInput)}
+                                                        onKeyDown={handleEditorKeyDown}
+                                                        onFocus={(event) => event.target.select()}
+                                                        placeholder="00"
                                                         className="w-16 h-12 text-center text-2xl font-mono bg-app-surface rounded-lg border border-app-border focus:border-app-primary focus:ring-1 focus:ring-app-primary outline-none"
-                                                        min="0"
-                                                        max="23"
                                                         aria-invalid={validationError ? true : undefined}
                                                         aria-describedby={
                                                             validationError ? validationErrorId : undefined
@@ -675,13 +733,14 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                                     </label>
                                                     <input
                                                         id="timer-min"
-                                                        type="number"
+                                                        type="text"
                                                         inputMode="numeric"
                                                         value={minutesInput}
                                                         onChange={handleInputChange(setMinutesInput)}
+                                                        onKeyDown={handleEditorKeyDown}
+                                                        onFocus={(event) => event.target.select()}
+                                                        placeholder="00"
                                                         className="w-16 h-12 text-center text-2xl font-mono bg-app-surface rounded-lg border border-app-border focus:border-app-primary focus:ring-1 focus:ring-app-primary outline-none"
-                                                        min="0"
-                                                        max="59"
                                                         aria-invalid={validationError ? true : undefined}
                                                         aria-describedby={
                                                             validationError ? validationErrorId : undefined
@@ -700,19 +759,33 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                                     </label>
                                                     <input
                                                         id="timer-sec"
-                                                        type="number"
+                                                        type="text"
                                                         inputMode="numeric"
                                                         value={secondsInput}
                                                         onChange={handleInputChange(setSecondsInput)}
+                                                        onKeyDown={handleEditorKeyDown}
+                                                        onFocus={(event) => event.target.select()}
+                                                        placeholder="00"
                                                         className="w-16 h-12 text-center text-2xl font-mono bg-app-surface rounded-lg border border-app-border focus:border-app-primary focus:ring-1 focus:ring-app-primary outline-none"
-                                                        min="0"
-                                                        max="59"
                                                         aria-invalid={validationError ? true : undefined}
                                                         aria-describedby={
                                                             validationError ? validationErrorId : undefined
                                                         }
                                                     />
                                                 </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center justify-center gap-1.5 w-full">
+                                                {QUICK_PRESET_MINUTES.map((preset) => (
+                                                    <button
+                                                        key={preset}
+                                                        type="button"
+                                                        onClick={() => applyPresetMinutes(preset)}
+                                                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-app-surface text-app-text-main border border-app-border hover:border-app-primary hover:text-app-primary transition-colors"
+                                                    >
+                                                        {preset}m
+                                                    </button>
+                                                ))}
                                             </div>
 
                                             {validationError && (
@@ -759,8 +832,8 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                                 {formatTimeDisplay(timeLeft)}
                                             </div>
                                             {!isActive && (
-                                                <span className="text-xs font-medium text-app-text-muted mt-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                                    <Timer size={12} aria-hidden="true" /> Click numbers to edit
+                                                <span className="text-xs font-medium text-app-text-muted group-hover:text-app-primary mt-2 transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-app-bg/70 border border-app-border/60">
+                                                    <Pencil size={12} aria-hidden="true" /> Tap to edit duration
                                                 </span>
                                             )}
                                         </button>
@@ -810,6 +883,15 @@ const CountdownTimer = memo(({ globalAlarmSource, stopGlobalAlarm }: CountdownTi
                                             </button>
 
                                             <div className="flex items-center gap-3 bg-app-bg/50 p-2 rounded-2xl border border-app-border/50 backdrop-blur-sm">
+                                                <button
+                                                    type="button"
+                                                    onClick={openEditor}
+                                                    aria-label="Edit timer duration"
+                                                    className="flex items-center justify-center w-10 h-10 rounded-full text-app-text-muted hover:bg-app-surface hover:text-app-primary transition-colors"
+                                                    title="Edit duration"
+                                                >
+                                                    <Pencil size={17} aria-hidden="true" />
+                                                </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => void resetTimer()}

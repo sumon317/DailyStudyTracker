@@ -2,12 +2,13 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import FocusPage from '../pages/FocusPage';
-import ReviewPage from '../pages/ReviewPage';
+import NotesPage from '../pages/NotesPage';
 import StatsPage from '../pages/StatsPage';
 import TrackerPage from '../pages/TrackerPage';
 import { ToastProvider } from '../providers/ToastProvider';
+import { createEmptyNote, createEmptyTaskItem } from '../services/notesService';
 import { exportAllData } from '../services/storage';
-import type { ChecklistItem, ErrorLogEntry, QualityCheckItem, Subject } from '../types';
+import type { Note, Subject } from '../types';
 
 vi.mock('../services/storage', () => ({
     exportAllData: vi.fn().mockResolvedValue([]),
@@ -43,19 +44,9 @@ const subjects: Subject[] = [
     { id: 2, name: 'Economics', planned: '90', actual: '30', kpi: 'N', time: '', reminder: false },
 ];
 
-const reviewProps = () => ({
-    checklistItems: [{ id: 1, label: 'Read notes', checked: false }] as ChecklistItem[],
-    setChecklistItems: vi.fn(),
-    qualityChecks: [{ id: 1, label: 'Cite sources', checked: false }] as QualityCheckItem[],
-    setQualityChecks: vi.fn(),
-    dayRating: '',
-    setDayRating: vi.fn(),
-    errors: [{ id: 1, question: 'q', mistake: 'm', correctLogic: 'l' }] as ErrorLogEntry[],
-    setErrors: vi.fn(),
-});
-
 describe('pages', () => {
     beforeEach(() => {
+        localStorage.clear();
         vi.mocked(exportAllData).mockResolvedValue([]);
     });
 
@@ -63,43 +54,51 @@ describe('pages', () => {
         vi.useRealTimers();
     });
 
-    describe('ReviewPage', () => {
-        it('names itself and renders all three review sections in order', () => {
-            render(<ReviewPage {...reviewProps()} />);
+    describe('NotesPage', () => {
+        it('names itself and renders the study notes workspace and inbuilt editor controls', () => {
+            render(<NotesPage />);
 
-            const section = screen.getByRole('region', { name: 'Review' });
+            const section = screen.getByRole('region', { name: 'Notes' });
             expect(section).toBeInTheDocument();
-            const headings = within(section)
-                .getAllByRole('heading')
-                .map((heading) => heading.textContent);
-            expect(headings).toEqual([
-                'Review',
-                'Output Checklist',
-                'Quality Check',
-                'Day Rating',
-                'Error Log',
-                'Error log 1',
-            ]);
+            expect(within(section).getByRole('heading', { name: 'Study Notes' })).toBeInTheDocument();
+            expect(within(section).getByRole('button', { name: /New Note/i })).toBeInTheDocument();
+            expect(within(section).getByRole('button', { name: /New Task List/i })).toBeInTheDocument();
         });
 
-        it('forwards each section change to the supplied setters', async () => {
+        it('creates and edits a text note and a task list note in the inbuilt editor', async () => {
             const user = userEvent.setup();
-            const props = reviewProps();
-            render(<ReviewPage {...props} />);
+            const sampleNote: Note = {
+                ...createEmptyNote('text', ['Formulas']),
+                id: 'note-1',
+                title: 'Thermodynamics',
+                body: 'First law of **thermodynamics**',
+            };
+            const listNote: Note = {
+                ...createEmptyNote('list'),
+                id: 'note-2',
+                title: 'Revision Tasks',
+                items: [
+                    { ...createEmptyTaskItem('Solve PYQs', false), id: 'task-1' },
+                    { ...createEmptyTaskItem('Chapter 1', true), id: 'task-2' },
+                ],
+            };
+            render(<NotesPage notes={[sampleNote, listNote]} />);
 
-            await user.click(screen.getByRole('checkbox', { name: /Mark checklist/ }));
-            expect(props.setChecklistItems).toHaveBeenCalledTimes(1);
+            expect(screen.getByText('Thermodynamics')).toBeInTheDocument();
+            expect(screen.getByText('Revision Tasks')).toBeInTheDocument();
 
-            await user.click(screen.getByRole('radio', { name: 'Productive' }));
-            expect(props.setDayRating).toHaveBeenCalledTimes(1);
+            await user.click(screen.getByRole('button', { name: 'Thermodynamics' }));
+            expect(screen.getByRole('region', { name: 'Inbuilt Note Editor' })).toBeInTheDocument();
+            expect(screen.getByRole('textbox', { name: 'Note title' })).toHaveValue('Thermodynamics');
+
+            await user.click(screen.getByRole('button', { name: 'Back to notes list' }));
+            expect(screen.queryByRole('region', { name: 'Inbuilt Note Editor' })).not.toBeInTheDocument();
         });
 
-        it('renders every section empty without a dedicated placeholder', () => {
-            render(<ReviewPage {...reviewProps()} checklistItems={[]} qualityChecks={[]} errors={[]} />);
+        it('renders the empty state placeholder when no notes exist', () => {
+            render(<NotesPage notes={[]} />);
 
-            expect(screen.getByText(/Add your first objective/i)).toBeInTheDocument();
-            expect(screen.getByText(/Add quality criteria/i)).toBeInTheDocument();
-            expect(screen.getByText(/No errors logged today/i)).toBeInTheDocument();
+            expect(screen.getByText(/No study notes yet/i)).toBeInTheDocument();
         });
     });
 

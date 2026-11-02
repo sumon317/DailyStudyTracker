@@ -3,6 +3,7 @@ package com.sumon.studytracker.update;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -19,8 +20,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Covers the JVM-safe parts of the install path: traversal rejection, cache containment and
- * the signer comparison. None of these helpers may call into the Android framework.
+ * Covers the JVM-safe parts of the install and download path: traversal rejection, cache
+ * containment, signer comparison, release download URL allowlist, and digest validation.
+ * None of these helpers may call into the Android framework.
  */
 public class AppUpdatePathTest {
 
@@ -361,6 +363,89 @@ public class AppUpdatePathTest {
         } catch (AppUpdatePlugin.RejectedInstallException expected) {
             assertEquals("APK file does not exist", expected.getMessage());
         }
+    }
+
+    @Test
+    public void releaseDownloadUrlAllowlistAcceptsGitHubReleasesAndCdnRedirects() {
+        assertTrue(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://github.com/sumon317/DailyStudyTracker/releases/download/v2.2.4/DailyStudyTracker-v2.2.4.apk"
+        ));
+        assertTrue(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://release-assets.githubusercontent.com/github-production-release-asset/1148518159/938dce2e?sp=r"
+        ));
+        assertTrue(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://release-assets.githubusercontent.com/github-production-release-asset-2e65be/1148518159/938dce2e?sp=r"
+        ));
+        assertTrue(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://objects.githubusercontent.com/github-production-release-asset-2e65be/1148518159/938dce2e?X-Amz=1"
+        ));
+    }
+
+    @Test
+    public void releaseDownloadUrlAllowlistRejectsUnapprovedHostsAndPaths() {
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(null));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(""));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "http://github.com/sumon317/DailyStudyTracker/releases/download/v2.2.4/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://evil.example/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://github.com/attacker/DailyStudyTracker/releases/download/v2.2.4/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://github.com/sumon317/DailyStudyTracker/releases/download/v2.2.4/%2e%2e/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://objects.githubusercontent.com/nwo/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://github.com:8443/sumon317/DailyStudyTracker/releases/download/v2.2.4/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://user:pass@github.com/sumon317/DailyStudyTracker/releases/download/v2.2.4/app.apk"
+        ));
+        assertFalse(AppUpdatePlugin.isAllowedReleaseDownloadUrl(
+                "https://github.com/sumon317/DailyStudyTracker/releases/download/v2.2.4/app.apk#frag"
+        ));
+    }
+
+    @Test
+    public void normalizesAndValidatesSha256Digests() {
+        String raw = "c98eaf10bd2ad5916e8ad2422ce67bc394e8b2752373cdb06b097f5a540b7edb";
+        assertEquals(raw, AppUpdatePlugin.normalizeSha256(raw));
+        assertEquals(raw, AppUpdatePlugin.normalizeSha256("  SHA256:" + raw.toUpperCase() + " "));
+        assertNull(AppUpdatePlugin.normalizeSha256(null));
+        assertNull(AppUpdatePlugin.normalizeSha256(""));
+        assertNull(AppUpdatePlugin.normalizeSha256("sha256:abc"));
+        assertNull(AppUpdatePlugin.normalizeSha256("sha512:" + raw));
+    }
+
+    @Test
+    public void formatsHexAndChecksZipMagicAndContentLength() throws Exception {
+        assertEquals("504b030400ff", AppUpdatePlugin.toLowerHex(
+                new byte[] { 0x50, 0x4b, 0x03, 0x04, 0x00, (byte) 0xff }
+        ));
+        assertTrue(AppUpdatePlugin.matchesZipMagic(new byte[] { 0x50, 0x4b, 0x03, 0x04 }));
+        assertFalse(AppUpdatePlugin.matchesZipMagic(new byte[] { 0x50, 0x4b, 0x03 }));
+        assertFalse(AppUpdatePlugin.matchesZipMagic(new byte[] { 0x00, 0x4b, 0x03, 0x04 }));
+
+        assertNull(AppUpdatePlugin.parseContentLengthHeader(null));
+        assertEquals(Long.valueOf(12604014L), AppUpdatePlugin.parseContentLengthHeader(" 12604014 "));
+
+        assertTrue(AppUpdatePlugin.isRedirectStatus(301));
+        assertTrue(AppUpdatePlugin.isRedirectStatus(302));
+        assertTrue(AppUpdatePlugin.isRedirectStatus(303));
+        assertTrue(AppUpdatePlugin.isRedirectStatus(307));
+        assertTrue(AppUpdatePlugin.isRedirectStatus(308));
+        assertFalse(AppUpdatePlugin.isRedirectStatus(200));
+
+        File root = cache.getRoot();
+        File target = AppUpdatePlugin.resolveTargetApkFile(
+                "update.apk", null, null, null, null, null, root
+        );
+        assertEquals(new File(root, "update.apk").getCanonicalFile(), target);
     }
 
     private static File resolve(

@@ -57,9 +57,7 @@ function wrapRoute(route: string, actual: { default: unknown }) {
 vi.mock('../pages/TrackerPage', async () =>
     wrapRoute('tracker', await vi.importActual<PageModule>('../pages/TrackerPage')),
 );
-vi.mock('../pages/ReviewPage', async () =>
-    wrapRoute('review', await vi.importActual<PageModule>('../pages/ReviewPage')),
-);
+vi.mock('../pages/NotesPage', async () => wrapRoute('notes', await vi.importActual<PageModule>('../pages/NotesPage')));
 vi.mock('../pages/StatsPage', async () => wrapRoute('stats', await vi.importActual<PageModule>('../pages/StatsPage')));
 vi.mock('../pages/TodoPage', async () => wrapRoute('todo', await vi.importActual<PageModule>('../pages/TodoPage')));
 vi.mock('../pages/FocusPage', async () => wrapRoute('focus', await vi.importActual<PageModule>('../pages/FocusPage')));
@@ -809,16 +807,16 @@ describe('Daily Study Tracker App', () => {
         expect(screen.getByRole('heading', { level: 1, name: 'Study tracker' })).toBeInTheDocument();
     });
 
-    it('renders the Review page with checklist', async () => {
+    it('renders the Notes page with inbuilt editor actions', async () => {
         const user = createUser();
         renderApp();
 
-        await navigateToRoute({ user, linkName: /Review/i, isReady: hasHeading('Review') });
+        await navigateToRoute({ user, linkName: /Notes/i, isReady: hasHeading('Notes') });
 
-        expect(screen.getByRole('heading', { name: 'Output Checklist' })).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: 'Quality Check' })).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: 'Error Log' })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /Review/i })).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByRole('heading', { name: 'Study Notes' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /New Note/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /New Task List/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Notes/i })).toHaveAttribute('aria-current', 'page');
     });
 
     it('renders the Stats page with a textual chart summary and data table', async () => {
@@ -848,7 +846,7 @@ describe('Daily Study Tracker App', () => {
         const committed = await waitForRouteCommit(hasHeading('Study tracker'));
         expect(committed).toBe(true);
         expect(screen.getByRole('heading', { level: 1, name: 'Study tracker' })).toBeInTheDocument();
-        expect(screen.queryByRole('heading', { level: 1, name: 'Review' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { level: 1, name: 'Notes' })).not.toBeInTheDocument();
     });
 
     it.each(['/deep/unknown/path', '/tracker/extra', '/stats/2024', '/focus/1/2/3'])(
@@ -900,7 +898,7 @@ describe('Daily Study Tracker App', () => {
         const routes: Array<[RegExp, () => boolean, string]> = [
             [/Tracker/i, routeReady(hasHeading(routeHeadings.tracker)), routeHeadings.tracker],
             [/Todo/i, routeReady(hasHeading(routeHeadings.todo)), routeHeadings.todo],
-            [/Review/i, routeReady(hasHeading(routeHeadings.review)), routeHeadings.review],
+            [/Notes/i, routeReady(hasHeading(routeHeadings.notes)), routeHeadings.notes],
             [/Stats/i, routeReady(hasHeading(routeHeadings.stats)), routeHeadings.stats],
             [/Focus/i, routeReady(hasHeading(routeHeadings.focus)), routeHeadings.focus],
         ];
@@ -951,7 +949,7 @@ describe('Daily Study Tracker App', () => {
         });
 
         const routes: Array<[RegExp, string]> = [
-            [/Review/i, 'review'],
+            [/Notes/i, 'notes'],
             [/Stats/i, 'stats'],
             [/Todo/i, 'todo'],
             [/Focus/i, 'focus'],
@@ -1001,10 +999,10 @@ describe('Daily Study Tracker App', () => {
             await user.click(screen.getByRole('link', { name: /Stats/i }));
             expect(await screen.findByRole('alert')).toBeInTheDocument();
 
-            // The failing boundary must not be a shared one: the review route
+            // The failing boundary must not be a shared one: the notes route
             // still has to render its own content.
-            await navigateToRoute({ user, linkName: /Review/i, isReady: hasHeading(routeHeadings.review) });
-            expect(screen.getByRole('heading', { name: 'Output Checklist' })).toBeInTheDocument();
+            await navigateToRoute({ user, linkName: /Notes/i, isReady: hasHeading(routeHeadings.notes) });
+            expect(screen.getByRole('heading', { name: 'Study Notes' })).toBeInTheDocument();
             expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         });
 
@@ -1047,20 +1045,21 @@ describe('Daily Study Tracker App', () => {
         expect(event.defaultPrevented).toBe(false);
     });
 
-    it('keeps unsaved review edits when navigating away and back', async () => {
+    it('keeps note edits when navigating away and back', async () => {
         const user = createUser();
         renderApp();
 
-        await navigateToRoute({ user, linkName: /Review/i, isReady: hasHeading('Review') });
-        const objective = screen.getByRole('textbox', { name: 'Checklist objective 1' });
-        await user.clear(objective);
-        await user.type(objective, 'Revise ledgers');
-        expect(objective).toHaveValue('Revise ledgers');
+        await navigateToRoute({ user, linkName: /Notes/i, isReady: hasHeading('Notes') });
+        await user.click(screen.getByRole('button', { name: /New Note/i }));
+        const titleInput = screen.getByRole('textbox', { name: 'Note title' });
+        await user.type(titleInput, 'Revise ledgers');
+        expect(titleInput).toHaveValue('Revise ledgers');
+        await user.click(screen.getByRole('button', { name: 'Back to notes list' }));
 
         await navigateToRoute({ user, linkName: /Tracker/i, isReady: hasHeading('Study tracker') });
-        await navigateToRoute({ user, linkName: /Review/i, isReady: hasHeading('Review') });
+        await navigateToRoute({ user, linkName: /Notes/i, isReady: hasHeading('Notes') });
 
-        expect(screen.getByRole('textbox', { name: 'Checklist objective 1' })).toHaveValue('Revise ledgers');
+        expect(screen.getByRole('heading', { name: 'Revise ledgers' })).toBeInTheDocument();
     });
 
     describe('header overflow menu', () => {
@@ -1709,6 +1708,12 @@ describe('Daily Study Tracker App', () => {
             renderApp();
             await settle();
             expect(screen.queryByRole('dialog', { name: 'Update Available' })).not.toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'More options' }));
+            await waitFor(() => expect(screen.getByRole('menuitem', { name: /Check Updates/i })).toBeInTheDocument());
+            await user.click(screen.getByRole('menuitem', { name: /Check Updates/i }));
+
+            expect(await screen.findByRole('dialog', { name: 'Update Available' })).toBeInTheDocument();
         });
     });
 });

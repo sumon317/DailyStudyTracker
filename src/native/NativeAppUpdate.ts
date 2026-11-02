@@ -1,13 +1,35 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle, registerPlugin } from '@capacitor/core';
 
 export interface NativeAppUpdateInstallPermission {
     granted: boolean;
 }
 
+export interface NativeAppUpdateDownloadOptions {
+    url: string;
+    sha256: string;
+    size?: number;
+    path?: string;
+}
+
+export interface NativeAppUpdateDownloadResult {
+    path?: string;
+    sha256?: string;
+    size?: number;
+}
+
+export interface NativeAppUpdateProgressEvent {
+    progress: number;
+}
+
 export interface NativeAppUpdatePlugin {
     checkInstallPermission(): Promise<NativeAppUpdateInstallPermission>;
     openInstallPermissionSettings(): Promise<void>;
+    downloadApk?(options: NativeAppUpdateDownloadOptions): Promise<NativeAppUpdateDownloadResult>;
     installApk(options: { path: string }): Promise<void>;
+    addListener?(
+        eventName: 'downloadProgress',
+        listenerFunc: (event: NativeAppUpdateProgressEvent) => void,
+    ): Promise<PluginListenerHandle>;
 }
 
 /**

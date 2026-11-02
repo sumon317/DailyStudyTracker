@@ -2404,3 +2404,79 @@ describe('downloadAndInstallUpdate: abandoned transfers', () => {
         expect(mocks.installApk).toHaveBeenCalledWith({ path: 'update.apk' });
     });
 });
+
+describe('downloadAndInstallUpdate: native download bridge', () => {
+    beforeEach(resetServiceMocks);
+
+    afterEach(async () => {
+        const plugin = (await import('../native/NativeAppUpdate')).default;
+        plugin.downloadApk = undefined;
+        plugin.addListener = undefined;
+        vi.unstubAllGlobals();
+        localStorage.clear();
+    });
+
+    it('delegates downloading to NativeAppUpdate.downloadApk to bypass WebView CORS', async () => {
+        const plugin = (await import('../native/NativeAppUpdate')).default;
+        const digest = 'c'.repeat(64);
+        const removeListener = vi.fn().mockResolvedValue(undefined);
+        let progressCallback: ((event: { progress: number }) => void) | undefined;
+
+        plugin.addListener = vi.fn((_event: 'downloadProgress', cb: (event: { progress: number }) => void) => {
+            progressCallback = cb;
+            return Promise.resolve({ remove: removeListener });
+        });
+        plugin.downloadApk = vi.fn().mockImplementation(async () => {
+            progressCallback?.({ progress: 45 });
+            progressCallback?.({ progress: 92 });
+            return { path: 'update.apk', sha256: digest, size: 4096 };
+        });
+
+        const progress = vi.fn();
+        const phases: string[] = [];
+        const result = await downloadAndInstallUpdate(apkSource({ sha256: digest, size: 4096 }), {
+            onProgress: progress,
+            onPhase: (phase) => phases.push(phase),
+        });
+
+        expect(result).toEqual({ success: true, assetName: 'app.apk', sha256: digest, size: 4096 });
+        expect(mocks.fetch).not.toHaveBeenCalled();
+        expect(mocks.writeFile).not.toHaveBeenCalled();
+        expect(progress).toHaveBeenCalledWith(45);
+        expect(progress).toHaveBeenCalledWith(92);
+        expect(progress).toHaveBeenLastCalledWith(100);
+        expect(phases).toEqual(['downloading', 'installing', 'success']);
+        expect(removeListener).toHaveBeenCalledTimes(1);
+        expect(mocks.installApk).toHaveBeenCalledWith({ path: 'update.apk' });
+    });
+
+    it('falls back to WebView fetch when NativeAppUpdate.downloadApk is unimplemented', async () => {
+        const plugin = (await import('../native/NativeAppUpdate')).default;
+        plugin.downloadApk = vi.fn().mockRejectedValue({
+            code: 'UNIMPLEMENTED',
+            message: '"NativeAppUpdate.downloadApk" is not implemented on android',
+        });
+
+        const bytes = apkBytes(64);
+        const digest = await sha256(bytes);
+        mocks.fetch.mockResolvedValue(octetStream(bytes, { 'content-length': String(bytes.length) }));
+
+        const result = await downloadAndInstallUpdate(apkSource({ sha256: digest, size: bytes.length }));
+        expect(result).toEqual({ success: true, assetName: 'app.apk', sha256: digest, size: bytes.length });
+        expect(mocks.fetch).toHaveBeenCalledTimes(1);
+        expect(mocks.installApk).toHaveBeenCalledWith({ path: 'update.apk' });
+    });
+
+    it('surfaces user-safe validation errors from the native plugin', async () => {
+        const plugin = (await import('../native/NativeAppUpdate')).default;
+        plugin.downloadApk = vi.fn().mockRejectedValue(new Error("APK is not signed by this application's signer"));
+
+        const result = await downloadAndInstallUpdate(apkSource());
+        expect(result).toEqual({
+            success: false,
+            error: "APK is not signed by this application's signer",
+            assetName: 'app.apk',
+        });
+        expect(mocks.installApk).not.toHaveBeenCalled();
+    });
+});
