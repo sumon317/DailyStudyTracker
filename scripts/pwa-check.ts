@@ -128,7 +128,8 @@ await runCheck('PWA output check', async () => {
             duplicated.set(url, (duplicated.get(url) ?? 0) + 1);
         }
         for (const [url, count] of duplicated) {
-            const injectedByPlugin = url === 'manifest.webmanifest' || /^assets\/pwa-[^/]*\.(?:png|jpe?g|svg)$/.test(url);
+            const injectedByPlugin =
+                url === 'manifest.webmanifest' || /^assets\/pwa-[^/]*\.(?:png|jpe?g|svg)$/.test(url);
             if (count > 2 || (count > 1 && !injectedByPlugin)) {
                 problems.push(`Duplicate precache entries: ${url} appears ${count} times`);
             }
