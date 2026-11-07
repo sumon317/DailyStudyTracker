@@ -35,7 +35,7 @@ export default function RichTextRenderer({ text, highlightQuery, className = '' 
     const lines = text.split('\n');
 
     return (
-        <div className={`space-y-1.5 break-words ${className}`}>
+        <div className={`space-y-1.5 break-words [overflow-wrap:anywhere] ${className}`}>
             {lines.map((line, lineIndex) => {
                 const lineKey = `line-${lineIndex}`;
                 if (line.length === 0) {
@@ -43,25 +43,34 @@ export default function RichTextRenderer({ text, highlightQuery, className = '' 
                 }
                 const spans = tokenizeRichText(line);
                 return (
-                    <p key={lineKey} className="leading-relaxed">
+                    <p
+                        key={lineKey}
+                        className="leading-relaxed break-words [overflow-wrap:anywhere] whitespace-pre-wrap"
+                    >
                         {spans.map((span, spanIndex) => {
                             const spanKey = `${lineKey}-span-${spanIndex}`;
                             switch (span.type) {
                                 case 'bold':
                                     return (
-                                        <strong key={spanKey} className="font-bold text-app-text-main">
+                                        <strong
+                                            key={spanKey}
+                                            className="font-bold text-app-text-main break-words [overflow-wrap:anywhere]"
+                                        >
                                             {highlightText(span.content, highlightQuery)}
                                         </strong>
                                     );
                                 case 'italic':
                                     return (
-                                        <em key={spanKey} className="italic">
+                                        <em key={spanKey} className="italic break-words [overflow-wrap:anywhere]">
                                             {highlightText(span.content, highlightQuery)}
                                         </em>
                                     );
                                 case 'strikethrough':
                                     return (
-                                        <span key={spanKey} className="line-through opacity-75">
+                                        <span
+                                            key={spanKey}
+                                            className="line-through opacity-75 break-words [overflow-wrap:anywhere]"
+                                        >
                                             {highlightText(span.content, highlightQuery)}
                                         </span>
                                     );
@@ -69,7 +78,7 @@ export default function RichTextRenderer({ text, highlightQuery, className = '' 
                                     return (
                                         <code
                                             key={spanKey}
-                                            className="rounded border border-app-border bg-app-bg/70 px-1.5 py-0.5 font-mono text-[0.85em] text-app-primary"
+                                            className="rounded border border-app-border bg-app-bg/70 px-1.5 py-0.5 font-mono text-[0.85em] text-app-primary break-all"
                                         >
                                             {highlightText(span.content, highlightQuery)}
                                         </code>
@@ -82,14 +91,20 @@ export default function RichTextRenderer({ text, highlightQuery, className = '' 
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={(event) => event.stopPropagation()}
-                                            className="inline-flex items-center gap-1 font-medium text-app-primary underline decoration-app-primary/60 underline-offset-2 hover:decoration-app-primary"
+                                            className="inline-flex max-w-full items-center gap-1 font-medium text-app-primary underline decoration-app-primary/60 underline-offset-2 hover:decoration-app-primary break-all"
                                         >
-                                            <span>{highlightText(span.label, highlightQuery)}</span>
+                                            <span className="break-all">
+                                                {highlightText(span.label, highlightQuery)}
+                                            </span>
                                             <ExternalLink size={12} aria-hidden="true" className="shrink-0" />
                                         </a>
                                     );
                                 default:
-                                    return <span key={spanKey}>{highlightText(span.content, highlightQuery)}</span>;
+                                    return (
+                                        <span key={spanKey} className="break-words [overflow-wrap:anywhere]">
+                                            {highlightText(span.content, highlightQuery)}
+                                        </span>
+                                    );
                             }
                         })}
                     </p>

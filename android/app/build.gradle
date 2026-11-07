@@ -8,11 +8,11 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Play-Store style version code: MAJOR * 1000000 + MINOR * 1000 + PATCH,
-        // so 2.4.0 -> 2004000. The tag release workflow recomputes both fields
+        // so 2.4.1 -> 2004001. The tag release workflow recomputes both fields
         // from the tag before it assembles the signed APK; this value keeps a
         // local release build on the same, monotonic scale.
-        versionCode 2004000
-        versionName "2.4.0"
+        versionCode 2004001
+        versionName "2.4.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

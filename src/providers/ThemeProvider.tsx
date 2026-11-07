@@ -1,10 +1,5 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-// The media-query resolution and its three-surface subscription fallback live in
-// one place. This file used to carry a byte-identical private copy of both,
-// which meant the fallback order the comment here described and the order the
-// code actually used were free to drift apart.
-import { resolveMediaQuery, subscribeToMediaQuery } from '../app/reducedMotion';
 import { subscribeToDataImported } from '../services/dataImportEvents';
 import type { ThemeContextValue, ThemeValue } from '../types';
 
@@ -13,11 +8,19 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const THEME_STORAGE_KEY = 'theme';
 export const ADAPTIVE_COLOR_STORAGE_KEY = 'adaptive-color';
 
-const DARK_SCHEME_QUERY = '(prefers-color-scheme: dark)';
+const THEMES: ThemeValue[] = ['midnight', 'daylight', 'ink', 'sepia', 'nord', 'rose'];
+const DARK_THEMES = new Set<ThemeValue>(['midnight', 'ink', 'nord', 'rose']);
+const DEFAULT_THEME: ThemeValue = 'midnight';
+const THEME_CLASSES = [
+    'dark',
+    'theme-midnight',
+    'theme-daylight',
+    'theme-ink',
+    'theme-sepia',
+    'theme-nord',
+    'theme-rose',
+] as const;
 
-const THEMES: ThemeValue[] = ['light', 'dark', 'auto', 'material-light', 'material-dark', 'adaptive'];
-const DEFAULT_THEME: ThemeValue = 'light';
-const DEFAULT_ADAPTIVE_COLOR = '#006e64';
 const COLOR_VARIABLES = [
     'bg',
     'surface',
@@ -42,7 +45,7 @@ const COLOR_VARIABLES = [
 ] as const;
 
 type ColorToken = (typeof COLOR_VARIABLES)[number];
-type AdaptiveTokenSet = Record<ColorToken, string>;
+void (null as ColorToken | null);
 
 interface EyeDropperInstance {
     open: () => Promise<{ sRGBHex: string }>;
@@ -194,95 +197,6 @@ function generateMaterialPalette(baseHex: string) {
     return palette;
 }
 
-function relativeLuminance(hex: string): number {
-    const rgb = hexToRgb(hex);
-    if (!rgb) {
-        return 0;
-    }
-    const channels = [rgb.r, rgb.g, rgb.b].map((value) => {
-        const channel = value / 255;
-        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-    });
-    return (channels[0] ?? 0) * 0.2126 + (channels[1] ?? 0) * 0.7152 + (channels[2] ?? 0) * 0.0722;
-}
-
-function contrastRatio(foreground: string, background: string): number {
-    const foregroundLuminance = relativeLuminance(foreground);
-    const backgroundLuminance = relativeLuminance(background);
-    const lighter = Math.max(foregroundLuminance, backgroundLuminance);
-    const darker = Math.min(foregroundLuminance, backgroundLuminance);
-    return (lighter + 0.05) / (darker + 0.05);
-}
-
-function contrastColor(background: string, light = '#ffffff', dark = '#1c1c20'): string {
-    return contrastRatio(light, background) >= contrastRatio(dark, background) ? light : dark;
-}
-
-function rgbString(hex: string): string {
-    const rgb = hexToRgb(hex);
-    return rgb ? `${rgb.r} ${rgb.g} ${rgb.b}` : '0 0 0';
-}
-
-function buildAdaptiveTokens(color: string): { light: AdaptiveTokenSet; dark: AdaptiveTokenSet } {
-    const palette = generateMaterialPalette(color);
-    const lightPrimary = palette[600] ?? color;
-    const darkPrimary = palette[300] ?? color;
-    const lightContainer = palette[100] ?? color;
-    const darkContainer = palette[700] ?? color;
-
-    const light: AdaptiveTokenSet = {
-        bg: '247 249 252',
-        surface: '255 255 255',
-        'surface-variant': rgbString(palette[100] ?? '#e4e6ec'),
-        'text-main': '28 28 32',
-        'text-muted': '80 88 96',
-        border: '200 211 214',
-        primary: rgbString(lightPrimary),
-        'primary-hover': rgbString(palette[700] ?? lightPrimary),
-        'primary-fg': rgbString(contrastColor(lightPrimary)),
-        'primary-container': rgbString(lightContainer),
-        'primary-container-text': rgbString(contrastColor(lightContainer, '#102a2a', '#ffffff')),
-        'on-surface-variant': '68 70 78',
-        outline: '160 178 181',
-        'outline-variant': rgbString(palette[200] ?? '#e4e6ec'),
-        'inverse-surface': '48 48 54',
-        'inverse-text': '236 236 242',
-        'accent-success': '0 128 64',
-        'accent-warning': '146 92 0',
-        'accent-error': '186 26 26',
-        scrim: '0 0 0',
-    };
-
-    const dark: AdaptiveTokenSet = {
-        bg: '16 20 22',
-        surface: '24 30 32',
-        'surface-variant': rgbString(palette[800] ?? '#343a40'),
-        'text-main': '228 235 234',
-        'text-muted': '164 177 175',
-        border: rgbString(palette[700] ?? '#384042'),
-        primary: rgbString(darkPrimary),
-        'primary-hover': rgbString(palette[200] ?? darkPrimary),
-        'primary-fg': rgbString(contrastColor(darkPrimary, '#102a2a', '#ffffff')),
-        'primary-container': rgbString(darkContainer),
-        'primary-container-text': rgbString(contrastColor(darkContainer, '#ffffff', '#102a2a')),
-        'on-surface-variant': '188 198 196',
-        outline: '116 132 130',
-        'outline-variant': rgbString(palette[700] ?? '#343a40'),
-        'inverse-surface': '228 235 234',
-        'inverse-text': '24 30 32',
-        'accent-success': '100 200 140',
-        'accent-warning': '245 190 70',
-        'accent-error': '255 140 140',
-        scrim: '0 0 0',
-    };
-
-    return { light, dark };
-}
-
-function getSystemPrefersDark() {
-    return resolveMediaQuery(DARK_SCHEME_QUERY)?.matches ?? false;
-}
-
 function getInitialTheme(): ThemeValue {
     if (typeof window === 'undefined') {
         return DEFAULT_THEME;
@@ -292,20 +206,32 @@ function getInitialTheme(): ThemeValue {
         if (stored && THEMES.includes(stored as ThemeValue)) {
             return stored as ThemeValue;
         }
+        switch (stored) {
+            case 'light':
+            case 'material-light':
+                return 'daylight';
+            case 'sage':
+                return 'sepia';
+            case 'black':
+                return 'ink';
+            case 'rose-pine':
+                return 'rose';
+            case 'dark':
+            case 'mocha':
+            case 'tokyo-night':
+            case 'material-dark':
+                return 'midnight';
+            default:
+                return DEFAULT_THEME;
+        }
     } catch {
         return DEFAULT_THEME;
     }
-    return DEFAULT_THEME;
 }
 
 /**
  * Reads the persisted adaptive colour, accepting both the canonical `#rrggbb`
  * form and the legacy `"r,g,b"` triple that earlier builds wrote.
- *
- * Returns the value *and* whether storage still needs rewriting. The rewrite is
- * deliberately not done here: this runs from a `useState` initialiser, and a
- * render must not mutate anything outside React. The effect that consumes
- * `needsRewrite` performs the write once per mount.
  */
 function readAdaptiveColor(): { color: string | null; needsRewrite: boolean } {
     if (typeof window === 'undefined') {
@@ -338,21 +264,6 @@ function readAdaptiveColor(): { color: string | null; needsRewrite: boolean } {
     return { color: null, needsRewrite: false };
 }
 
-function useSystemTheme() {
-    const [prefersDark, setPrefersDark] = useState(getSystemPrefersDark);
-
-    useEffect(() => {
-        const mediaQuery = resolveMediaQuery(DARK_SCHEME_QUERY);
-        const unsubscribe = subscribeToMediaQuery(mediaQuery, (event) => setPrefersDark(event.matches));
-        if (mediaQuery) {
-            setPrefersDark(mediaQuery.matches);
-        }
-        return unsubscribe;
-    }, []);
-
-    return prefersDark;
-}
-
 export function useTheme(): ThemeContextValue {
     const context = useContext(ThemeContext);
     if (!context) {
@@ -379,31 +290,6 @@ function clearAdaptiveStyles(root: HTMLElement) {
     root.style.removeProperty('--adaptive-base');
 }
 
-function applyAdaptiveStyles(root: HTMLElement, color: string, isDark: boolean) {
-    const tokens = buildAdaptiveTokens(color);
-    const palette = generateMaterialPalette(color);
-
-    for (const mode of ['light', 'dark'] as const) {
-        for (const token of COLOR_VARIABLES) {
-            root.style.setProperty(`--adaptive-${mode}-${token}`, tokens[mode][token]);
-        }
-    }
-
-    for (const tone of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
-        root.style.setProperty(`--adaptive-${tone}`, palette[tone] ?? color);
-    }
-
-    root.style.setProperty('--adaptive-primary', isDark ? (palette[300] ?? color) : (palette[600] ?? color));
-    root.style.setProperty('--adaptive-primary-light', palette[200] ?? color);
-    root.style.setProperty('--adaptive-primary-dark', palette[700] ?? color);
-    root.style.setProperty('--adaptive-base', color);
-
-    const activeTokens = isDark ? tokens.dark : tokens.light;
-    for (const token of COLOR_VARIABLES) {
-        root.style.setProperty(`--color-app-${token}`, activeTokens[token]);
-    }
-}
-
 interface ThemeProviderProps {
     children: ReactNode;
 }
@@ -412,33 +298,19 @@ export default function ThemeProvider({ children }: ThemeProviderProps) {
     const [theme, setThemeState] = useState<ThemeValue>(getInitialTheme);
     const [adaptiveState, setAdaptiveState] = useState(readAdaptiveColor);
     const [adaptiveColorOverride, setAdaptiveColorOverride] = useState<string | null>(null);
-    const prefersDark = useSystemTheme();
-    const adaptiveColor = adaptiveColorOverride ?? adaptiveState.color;
+    void adaptiveColorOverride;
 
-    // A restore can carry a different theme. This provider reads its value once,
-    // at mount, so without this the backup's theme was applied to the store and
-    // then ignored on screen until the app was closed and reopened.
     useEffect(() => {
         return subscribeToDataImported(() => {
             setThemeState(getInitialTheme());
             const restored = readAdaptiveColor();
             setAdaptiveState(restored);
-            // A colour picked earlier in this session outranks the store, which
-            // is exactly what keeps the *picked* colour on screen across a
-            // restore that changed nothing. It also meant a restore that *did*
-            // carry a different colour was applied to the store and then ignored
-            // for the rest of the session - the same bug this effect already
-            // fixed for the theme. A colour in the restored store is the newer
-            // intent and takes over; a restore that carries none is not an
-            // instruction to throw away a choice the user made this session.
             if (restored.color) {
                 setAdaptiveColorOverride(null);
             }
         });
     }, []);
 
-    // A legacy `"r,g,b"` value is migrated to the canonical hex form here
-    // rather than during the render that read it.
     useEffect(() => {
         if (!adaptiveState.needsRewrite || !adaptiveState.color) {
             return;
@@ -450,12 +322,7 @@ export default function ThemeProvider({ children }: ThemeProviderProps) {
         }
     }, [adaptiveState]);
 
-    const effectiveTheme = useMemo(() => {
-        if (theme === 'auto') {
-            return prefersDark ? 'dark' : 'light';
-        }
-        return theme;
-    }, [prefersDark, theme]);
+    const effectiveTheme = theme;
 
     const setTheme = useCallback((newTheme: ThemeValue) => {
         if (!THEMES.includes(newTheme)) {
@@ -471,39 +338,24 @@ export default function ThemeProvider({ children }: ThemeProviderProps) {
 
     useEffect(() => {
         const root = document.documentElement;
-        const isDark =
-            effectiveTheme === 'dark' ||
-            effectiveTheme === 'material-dark' ||
-            (effectiveTheme === 'adaptive' && prefersDark);
+        const isDark = DARK_THEMES.has(theme);
 
-        root.classList.remove('dark', 'theme-material-light', 'theme-material-dark', 'theme-adaptive');
+        root.classList.remove(...THEME_CLASSES);
         clearAdaptiveStyles(root);
 
         if (isDark) {
             root.classList.add('dark');
         }
-        if (theme === 'material-light') {
-            root.classList.add('theme-material-light');
-        } else if (theme === 'material-dark') {
-            root.classList.add('theme-material-dark');
-        } else if (theme === 'adaptive') {
-            root.classList.add('theme-adaptive');
-            applyAdaptiveStyles(root, adaptiveColor ?? DEFAULT_ADAPTIVE_COLOR, isDark);
-        }
+        root.classList.add(`theme-${theme}`);
 
         root.style.colorScheme = isDark ? 'dark' : 'light';
 
-        // `<html>` outlives the provider whenever the provider is mounted
-        // conditionally, so the classes and the ~200 inline adaptive variables
-        // have to be taken back off on the way out. Without this the next
-        // provider to mount - or the next test in the same document - inherits a
-        // palette and a colour scheme that nothing chose.
         return () => {
-            root.classList.remove('dark', 'theme-material-light', 'theme-material-dark', 'theme-adaptive');
+            root.classList.remove(...THEME_CLASSES);
             clearAdaptiveStyles(root);
             root.style.removeProperty('color-scheme');
         };
-    }, [adaptiveColor, effectiveTheme, prefersDark, theme]);
+    }, [theme]);
 
     const pickAdaptiveColor = useCallback(async () => {
         if (typeof window === 'undefined') {

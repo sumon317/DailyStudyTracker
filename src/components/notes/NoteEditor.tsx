@@ -740,8 +740,8 @@ export default function NoteEditor({
 
             {/* Title and Metadata Header */}
             <div className="mt-4 space-y-2">
-                <input
-                    type="text"
+                <textarea
+                    rows={1}
                     value={note.title}
                     readOnly={isReadOnly}
                     onChange={(event) =>
@@ -750,9 +750,28 @@ export default function NoteEditor({
                             title: event.target.value,
                         }))
                     }
+                    onInput={(event) => {
+                        const target = event.currentTarget;
+                        target.style.height = 'auto';
+                        target.style.height = `${target.scrollHeight}px`;
+                    }}
+                    ref={(el) => {
+                        if (el) {
+                            el.style.height = 'auto';
+                            el.style.height = `${el.scrollHeight}px`;
+                        }
+                    }}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            if (note.type === 'text') {
+                                textareaRef.current?.focus();
+                            }
+                        }
+                    }}
                     placeholder="Title"
                     aria-label="Note title"
-                    className="w-full bg-transparent text-xl sm:text-2xl font-bold text-app-text-main placeholder:text-app-text-muted/60 focus:outline-none"
+                    className="w-full bg-transparent text-xl sm:text-2xl font-bold text-app-text-main placeholder:text-app-text-muted/60 focus:outline-none resize-none break-words whitespace-pre-wrap [field-sizing:content]"
                 />
 
                 <div className="flex flex-wrap items-center gap-3 text-xs text-app-text-muted">
@@ -893,7 +912,7 @@ export default function NoteEditor({
                                 rows={10}
                                 placeholder="Write your study notes here... Supports **bold**, *italic*, ~~strikethrough~~, `monospace`, and [links](https://...)"
                                 aria-label="Note content"
-                                className="w-full rounded-xl border border-app-border/60 bg-app-surface/50 dark:bg-black/20 backdrop-blur-sm p-3.5 text-sm leading-relaxed text-app-text-main placeholder:text-app-text-muted/60 focus:outline-none focus:ring-2 focus:ring-app-primary resize-y"
+                                className="w-full rounded-xl border border-app-border/60 bg-app-surface/50 dark:bg-black/20 backdrop-blur-sm p-3.5 text-sm leading-relaxed text-app-text-main placeholder:text-app-text-muted/60 focus:outline-none focus:ring-2 focus:ring-app-primary resize-y break-words whitespace-pre-wrap [overflow-wrap:anywhere]"
                             />
 
                             {note.body.trim().length > 0 && (
@@ -918,7 +937,7 @@ export default function NoteEditor({
                         {activeItems.map((item, idx) => (
                             <div
                                 key={item.id}
-                                className={`flex items-center gap-1.5 rounded-xl border border-app-border/60 bg-app-surface/50 dark:bg-black/20 backdrop-blur-sm px-2.5 py-2 transition-all ${
+                                className={`flex items-start gap-1.5 rounded-xl border border-app-border/60 bg-app-surface/50 dark:bg-black/20 backdrop-blur-sm px-2.5 py-2 transition-all ${
                                     item.isChild ? 'ml-6 sm:ml-8 border-dashed' : ''
                                 }`}
                             >
@@ -936,7 +955,7 @@ export default function NoteEditor({
                                             ? `Mark "${item.text || `Item ${idx + 1}`}" as incomplete`
                                             : `Mark "${item.text || `Item ${idx + 1}`}" as complete`
                                     }
-                                    className="p-1 text-app-text-muted hover:text-app-primary disabled:opacity-50"
+                                    className="p-1 text-app-text-muted hover:text-app-primary disabled:opacity-50 shrink-0 mt-0.5"
                                 >
                                     {item.checked ? (
                                         <CheckSquare size={18} aria-hidden="true" className="text-app-primary" />
@@ -945,26 +964,37 @@ export default function NoteEditor({
                                     )}
                                 </button>
 
-                                <input
-                                    type="text"
+                                <textarea
+                                    rows={1}
                                     value={item.text}
                                     readOnly={isReadOnly}
                                     onChange={(event) => handleUpdateTaskText(item.id, event.target.value)}
+                                    onInput={(event) => {
+                                        const target = event.currentTarget;
+                                        target.style.height = 'auto';
+                                        target.style.height = `${target.scrollHeight}px`;
+                                    }}
+                                    ref={(el) => {
+                                        if (el) {
+                                            el.style.height = 'auto';
+                                            el.style.height = `${el.scrollHeight}px`;
+                                        }
+                                    }}
                                     onKeyDown={(event) => {
-                                        if (event.key === 'Enter' && !isReadOnly) {
+                                        if (event.key === 'Enter' && !isReadOnly && !event.shiftKey) {
                                             event.preventDefault();
                                             handleAddTaskAfter(item.id, item.isChild);
                                         }
                                     }}
                                     placeholder={item.isChild ? 'Subtask...' : 'List item...'}
                                     aria-label={item.isChild ? `Subtask ${idx + 1}` : `Task item ${idx + 1}`}
-                                    className={`flex-1 bg-transparent text-sm focus:outline-none ${
+                                    className={`flex-1 bg-transparent text-sm focus:outline-none resize-none break-words whitespace-pre-wrap [field-sizing:content] py-1 leading-relaxed ${
                                         item.checked ? 'line-through text-app-text-muted' : 'text-app-text-main'
                                     }`}
                                 />
 
                                 {!isReadOnly && (
-                                    <div className="flex items-center gap-0.5">
+                                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -1071,7 +1101,7 @@ export default function NoteEditor({
                                     {checkedItems.map((item) => (
                                         <div
                                             key={item.id}
-                                            className={`flex items-center gap-2 rounded-xl border border-app-border/40 bg-app-surface/40 dark:bg-black/15 backdrop-blur-sm px-2.5 py-1.5 ${
+                                            className={`flex items-start gap-2 rounded-xl border border-app-border/40 bg-app-surface/40 dark:bg-black/15 backdrop-blur-sm px-2.5 py-1.5 ${
                                                 item.isChild ? 'ml-6 sm:ml-8' : ''
                                             }`}
                                         >
@@ -1085,11 +1115,11 @@ export default function NoteEditor({
                                                     }))
                                                 }
                                                 aria-label={`Uncheck "${item.text || 'item'}"`}
-                                                className="p-1 text-app-primary disabled:opacity-50"
+                                                className="p-1 text-app-primary disabled:opacity-50 shrink-0 mt-0.5"
                                             >
                                                 <CheckSquare size={16} aria-hidden="true" />
                                             </button>
-                                            <span className="flex-1 text-sm line-through text-app-text-muted">
+                                            <span className="flex-1 text-sm line-through text-app-text-muted break-words whitespace-pre-wrap [overflow-wrap:anywhere] py-1 leading-relaxed">
                                                 {item.text || 'Completed item'}
                                             </span>
                                             {!isReadOnly && (
@@ -1097,7 +1127,7 @@ export default function NoteEditor({
                                                     type="button"
                                                     onClick={() => handleRemoveTaskItem(item.id)}
                                                     aria-label={`Remove checked item "${item.text || 'item'}"`}
-                                                    className="rounded-lg p-1 text-app-text-muted hover:text-rose-400"
+                                                    className="rounded-lg p-1 text-app-text-muted hover:text-rose-400 shrink-0 mt-0.5"
                                                 >
                                                     <X size={14} aria-hidden="true" />
                                                 </button>

@@ -57,7 +57,7 @@ const parseLegacyDayArray = (value: unknown, path: string): DayData[] => {
     return days.sort((first, second) => first.date.localeCompare(second.date));
 };
 
-export const defaultSettings = (): BackupSettings => ({ theme: 'light', adaptiveColor: null });
+export const defaultSettings = (): BackupSettings => ({ theme: 'midnight', adaptiveColor: null });
 
 export const createEmptyEnvelope = (): BackupEnvelope => ({
     schemaVersion: BACKUP_SCHEMA_VERSION,

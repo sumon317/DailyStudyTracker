@@ -44,9 +44,9 @@ export default function NoteCard({
                     <button
                         type="button"
                         onClick={() => onOpen(note.id)}
-                        className="flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary rounded-lg"
+                        className="flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary rounded-lg min-w-0"
                     >
-                        <h3 className="font-bold text-base text-app-text-main line-clamp-2">
+                        <h3 className="font-bold text-base text-app-text-main break-words [overflow-wrap:anywhere]">
                             {note.title.trim() || 'Untitled note'}
                         </h3>
                     </button>
@@ -70,7 +70,7 @@ export default function NoteCard({
                 <div className="text-left text-sm text-app-text-muted rounded-lg">
                     {note.type === 'text' ? (
                         note.body.trim().length > 0 ? (
-                            <div className="line-clamp-6 text-app-text-main/90">
+                            <div className="text-app-text-main/90 break-words [overflow-wrap:anywhere]">
                                 <RichTextRenderer text={note.body} highlightQuery={searchQuery} />
                             </div>
                         ) : (
@@ -94,7 +94,7 @@ export default function NoteCard({
                                         />
                                     )}
                                     <span
-                                        className={`line-clamp-1 ${
+                                        className={`break-words whitespace-normal min-w-0 flex-1 [overflow-wrap:anywhere] ${
                                             item.checked ? 'line-through text-app-text-muted' : 'text-app-text-main/90'
                                         }`}
                                     >

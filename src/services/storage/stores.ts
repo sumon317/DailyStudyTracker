@@ -820,7 +820,7 @@ export const readNativeEnvelopeUnqueued = async (): Promise<{
             legacy.recurringSubjects.length > 0 ||
             legacy.todos !== null ||
             legacy.focusAlarms.length > 0 ||
-            legacy.settings.theme !== 'light' ||
+            legacy.settings.theme !== 'midnight' ||
             legacy.settings.adaptiveColor !== null;
         return {
             envelope: {

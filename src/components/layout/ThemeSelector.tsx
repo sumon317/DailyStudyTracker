@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Droplets, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { BookOpen, Eclipse, Flower2, Moon, Snowflake, Sun } from 'lucide-react';
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react';
-import { useTheme } from '../../providers/ThemeProvider';
 import type { ThemeSelectorProps, ThemeValue } from '../../types';
 import { focusAfterContainer } from '../shared/focusOrder';
 
@@ -10,22 +9,66 @@ interface ThemeOption {
     label: string;
     icon: typeof Sun;
     description: string;
+    swatchBg: string;
+    swatchAccent: string;
+    isLightIcon?: boolean;
 }
 
 const THEMES: ThemeOption[] = [
-    { value: 'light', label: 'Light', icon: Sun, description: 'Clean light theme' },
-    { value: 'dark', label: 'Dark', icon: Moon, description: 'Easy on the eyes' },
-    { value: 'auto', label: 'Auto', icon: Monitor, description: 'Follows system' },
-    { value: 'material-light', label: 'Material', icon: Palette, description: 'Material You light' },
-    { value: 'material-dark', label: 'Material Dark', icon: Palette, description: 'Material You dark' },
-    { value: 'adaptive', label: 'Adaptive', icon: Droplets, description: 'Pick your color' },
+    {
+        value: 'midnight',
+        label: 'Midnight',
+        icon: Moon,
+        description: 'Classic dark palette',
+        swatchBg: 'bg-[#101216] border-[#3C3E46]',
+        swatchAccent: 'bg-[#8CC6FF]',
+    },
+    {
+        value: 'daylight',
+        label: 'Daylight',
+        icon: Sun,
+        description: 'Clean light & blue accent',
+        swatchBg: 'bg-[#F7F9FC] border-[#D8DAE2]',
+        swatchAccent: 'bg-[#0062A0]',
+        isLightIcon: true,
+    },
+    {
+        value: 'ink',
+        label: 'Ink',
+        icon: Eclipse,
+        description: 'True-black OLED & crisp sans',
+        swatchBg: 'bg-[#000000] border-[#22242A]',
+        swatchAccent: 'bg-[#70B8FF]',
+    },
+    {
+        value: 'sepia',
+        label: 'Sepia',
+        icon: BookOpen,
+        description: 'Warm paper & bookish serif',
+        swatchBg: 'bg-[#F6EFE0] border-[#DACAEE]',
+        swatchAccent: 'bg-[#B45309]',
+        isLightIcon: true,
+    },
+    {
+        value: 'nord',
+        label: 'Nord',
+        icon: Snowflake,
+        description: 'Cool frost blue-gray & cyan',
+        swatchBg: 'bg-[#2E3440] border-[#4C566A]',
+        swatchAccent: 'bg-[#88C0D0]',
+    },
+    {
+        value: 'rose',
+        label: 'Rose',
+        icon: Flower2,
+        description: 'Deep plum dark & rose pink',
+        swatchBg: 'bg-[#191724] border-[#403D52]',
+        swatchAccent: 'bg-[#EB6F92]',
+    },
 ];
 
 const ThemeSelector = memo(({ theme, setTheme }: ThemeSelectorProps) => {
-    const { pickAdaptiveColor } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
-    const [isPicking, setIsPicking] = useState(false);
-    const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -76,32 +119,11 @@ const ThemeSelector = memo(({ theme, setTheme }: ThemeSelectorProps) => {
     }, [closeMenu, isOpen]);
 
     const handleSelect = useCallback(
-        async (value: ThemeValue) => {
-            if (value === 'adaptive') {
-                setIsPicking(true);
-                let result: Awaited<ReturnType<typeof pickAdaptiveColor>> = null;
-                try {
-                    result = await pickAdaptiveColor();
-                } catch {
-                    result = null;
-                }
-                setIsPicking(false);
-                if (!result) {
-                    // Cancelling the picker is a normal outcome, but a browser
-                    // without the EyeDropper API needs an explanation.
-                    setStatusMessage(
-                        typeof window !== 'undefined' && 'EyeDropper' in window
-                            ? 'No colour was picked. Your theme is unchanged.'
-                            : 'Colour picking is not supported in this browser. Pick another theme.',
-                    );
-                    closeMenu();
-                    return;
-                }
-            }
+        (value: ThemeValue) => {
             setTheme(value);
             closeMenu();
         },
-        [closeMenu, pickAdaptiveColor, setTheme],
+        [closeMenu, setTheme],
     );
 
     const currentTheme = THEMES.find((option) => option.value === theme) ?? THEMES[0];
@@ -117,20 +139,16 @@ const ThemeSelector = memo(({ theme, setTheme }: ThemeSelectorProps) => {
                 id={triggerId}
                 type="button"
                 onClick={() => setIsOpen((open) => !open)}
-                className="flex items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-2 py-1.5 text-xs text-app-text-muted transition-colors hover:text-app-text-main md-ripple"
+                className="flex items-center gap-1.5 rounded-lg border border-app-border bg-app-surface px-2.5 py-1.5 text-xs font-medium text-app-text-muted transition-colors hover:text-app-text-main md-ripple"
                 title="Change theme"
                 aria-label={`Change theme. Current theme: ${currentTheme.label}`}
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
                 aria-controls={isOpen ? menuId : undefined}
             >
-                <CurrentIcon size={14} aria-hidden="true" />
+                <CurrentIcon size={14} className="text-app-primary" aria-hidden="true" />
                 <span className="hidden sm:inline">{currentTheme.label}</span>
             </button>
-
-            <span role="status" aria-live="polite" className="sr-only">
-                {statusMessage ?? ''}
-            </span>
 
             <AnimatePresence>
                 {isOpen && (
@@ -138,50 +156,59 @@ const ThemeSelector = memo(({ theme, setTheme }: ThemeSelectorProps) => {
                         ref={menuRef}
                         id={menuId}
                         role="menu"
-                        aria-busy={isPicking}
                         aria-label="Theme options"
                         initial={{ opacity: 0, y: -8, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.95 }}
                         transition={{ duration: 0.12 }}
-                        className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-app-outline-variant bg-app-surface shadow-xl md-elevation-3"
+                        className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-app-outline-variant bg-app-surface shadow-xl md-elevation-3"
                     >
-                        <div className="p-2">
+                        <div className="p-2 space-y-0.5">
                             {THEMES.map((option) => {
                                 const OptionIcon = option.icon;
                                 const isActive = theme === option.value;
-                                const isDisabled = isPicking && option.value === 'adaptive';
                                 return (
                                     <button
                                         key={option.value}
                                         type="button"
                                         role="menuitemradio"
                                         aria-checked={isActive}
-                                        disabled={isDisabled}
-                                        onClick={() => void handleSelect(option.value)}
-                                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all md-ripple disabled:cursor-wait disabled:opacity-60 ${
+                                        onClick={() => handleSelect(option.value)}
+                                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-all md-ripple ${
                                             isActive
-                                                ? 'bg-app-primary-container text-app-primary-container-text'
+                                                ? 'bg-app-primary-container text-app-primary-container-text font-medium'
                                                 : 'text-app-text-main hover:bg-app-surface-variant'
                                         }`}
                                     >
-                                        <OptionIcon size={16} className="shrink-0" aria-hidden="true" />
-                                        <span className="flex-1">
-                                            <span className="block font-medium">{option.label}</span>
+                                        <span
+                                            className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${option.swatchBg}`}
+                                            aria-hidden="true"
+                                        >
+                                            <OptionIcon
+                                                size={14}
+                                                className={option.isLightIcon ? 'text-stone-800' : 'text-slate-100'}
+                                            />
                                             <span
-                                                className={`block text-[10px] ${
+                                                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-app-surface ${option.swatchAccent}`}
+                                            />
+                                        </span>
+                                        <span className="flex-1 min-w-0">
+                                            <span className="block font-medium leading-tight">{option.label}</span>
+                                            <span
+                                                className={`block truncate text-[10px] ${
                                                     isActive
                                                         ? 'text-app-primary-container-text/80'
                                                         : 'text-app-text-muted'
                                                 }`}
                                             >
-                                                {isPicking && option.value === 'adaptive'
-                                                    ? 'Choosing color…'
-                                                    : option.description}
+                                                {option.description}
                                             </span>
                                         </span>
                                         {isActive && (
-                                            <span className="h-2 w-2 rounded-full bg-app-primary" aria-hidden="true" />
+                                            <span
+                                                className="h-2 w-2 shrink-0 rounded-full bg-app-primary"
+                                                aria-hidden="true"
+                                            />
                                         )}
                                     </button>
                                 );

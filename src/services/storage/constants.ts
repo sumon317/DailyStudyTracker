@@ -76,7 +76,26 @@ export const MAX_FILE_BYTES = 64 * 1024 * 1024;
 export const LEGACY_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 
 /** The themes a stored settings record may name. */
-export const THEMES = new Set(['light', 'dark', 'auto', 'material-light', 'material-dark', 'adaptive']);
+export const THEMES = new Set([
+    'midnight',
+    'daylight',
+    'ink',
+    'sepia',
+    'nord',
+    'rose',
+    // Accepted from older backups/stores:
+    'light',
+    'dark',
+    'black',
+    'sage',
+    'mocha',
+    'rose-pine',
+    'tokyo-night',
+    'auto',
+    'adaptive',
+    'material-light',
+    'material-dark',
+]);
 
 /**
  * Keys that would let a payload reach `Object.prototype` or a constructor.

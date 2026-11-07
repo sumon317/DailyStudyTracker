@@ -175,7 +175,7 @@ export interface BackupEnvelope {
 // Theme Types
 // ---------------------------------------------------------------------------
 
-export type ThemeValue = 'light' | 'dark' | 'auto' | 'material-light' | 'material-dark' | 'adaptive';
+export type ThemeValue = 'midnight' | 'daylight' | 'ink' | 'sepia' | 'nord' | 'rose';
 
 export interface ThemeContextValue {
     theme: ThemeValue;

@@ -161,7 +161,7 @@ const makeEnvelope = (overrides: Partial<BackupEnvelope> = {}): BackupEnvelope =
         recurringSubjects: [],
         todos: [],
         focusAlarms: [],
-        settings: { theme: 'light', adaptiveColor: null },
+        settings: { theme: 'midnight', adaptiveColor: null },
         ...rest,
         // An explicit `undefined` means "no stamps at all", which is what a backup
         // written before the field existed normalises to. It is spread last and
@@ -279,7 +279,7 @@ describe('backup validation', () => {
             recurringSubjects: [makeRecurringSubject({ id: 2, name: 'Economics', recurringDays: [1, 3] })],
             todos: [{ id: 3, text: 'Solve questions', completed: false, time: '18:30', reminder: true }],
             focusAlarms: [{ id: 'alarm-1', time: '07:00', active: true, nativeId: 42 }],
-            settings: { theme: 'dark', adaptiveColor: '#123456' },
+            settings: { theme: 'nord', adaptiveColor: '#123456' },
         });
 
         expect(validateBackup(envelope)).toEqual(envelope);
@@ -473,23 +473,21 @@ describe('native persistence', () => {
     });
 
     it('keeps the settings mirror in step with the file it just wrote', async () => {
-        await importAllData(makeEnvelope({ settings: { theme: 'dark', adaptiveColor: null } }));
-        await saveSettings({ theme: 'material-dark', adaptiveColor: '#abcdef' });
+        await importAllData(makeEnvelope({ settings: { theme: 'midnight', adaptiveColor: null } }));
+        await saveSettings({ theme: 'nord', adaptiveColor: '#abcdef' });
 
         expect(JSON.parse(localStorage.getItem('__settings') ?? 'null')).toEqual({
-            theme: 'material-dark',
+            theme: 'nord',
             adaptiveColor: '#abcdef',
         });
-        expect(await loadSettings()).toEqual({ theme: 'material-dark', adaptiveColor: '#abcdef' });
+        expect(await loadSettings()).toEqual({ theme: 'nord', adaptiveColor: '#abcdef' });
     });
 
     it('keeps the canonical setting that a partial overlay does not carry', async () => {
-        nativeState.fileData = JSON.stringify(
-            makeEnvelope({ settings: { theme: 'material-light', adaptiveColor: null } }),
-        );
+        nativeState.fileData = JSON.stringify(makeEnvelope({ settings: { theme: 'sepia', adaptiveColor: null } }));
         localStorage.setItem('adaptive-color', '#0a0b0c');
 
-        expect(await loadSettings()).toEqual({ theme: 'material-light', adaptiveColor: '#0a0b0c' });
+        expect(await loadSettings()).toEqual({ theme: 'sepia', adaptiveColor: '#0a0b0c' });
     });
 
     it('lets an explicit restore win over timestamp-less legacy data', async () => {
@@ -519,13 +517,13 @@ describe('native persistence', () => {
         await saveRecurringSubjects([makeRecurringSubject({ id: 9, recurringDays: [1] })]);
         await saveGlobalTodos([{ id: 4, text: 'Read chapter', completed: false, time: '', reminder: false }]);
         await saveFocusAlarms([{ id: 'focus-1', time: '06:15', active: false }]);
-        await saveSettings({ theme: 'material-dark', adaptiveColor: '#abcdef' });
+        await saveSettings({ theme: 'nord', adaptiveColor: '#abcdef' });
 
         const envelope = await exportBackup();
         expect(envelope.recurringSubjects).toHaveLength(1);
         expect(envelope.todos[0]?.text).toBe('Read chapter');
         expect(envelope.focusAlarms[0]?.id).toBe('focus-1');
-        expect(envelope.settings).toEqual({ theme: 'material-dark', adaptiveColor: '#abcdef' });
+        expect(envelope.settings).toEqual({ theme: 'nord', adaptiveColor: '#abcdef' });
     });
 
     it('migrates the legacy native day map into the versioned envelope', async () => {
@@ -538,7 +536,7 @@ describe('native persistence', () => {
             recurringSubjects: [],
             todos: [],
             focusAlarms: [],
-            settings: { theme: 'light', adaptiveColor: null },
+            settings: { theme: 'midnight', adaptiveColor: null },
         });
 
         const envelope = await exportBackup();
@@ -549,11 +547,11 @@ describe('native persistence', () => {
 
     it('keeps current component-owned settings and focus alarms in exports', async () => {
         nativeState.fileData = JSON.stringify(makeEnvelope());
-        localStorage.setItem('theme', 'dark');
+        localStorage.setItem('theme', 'nord');
         localStorage.setItem('focusAlarms', JSON.stringify([{ id: 'local-focus', time: '09:00', active: false }]));
 
         const envelope = await exportBackup();
-        expect(envelope.settings.theme).toBe('dark');
+        expect(envelope.settings.theme).toBe('nord');
         expect(envelope.focusAlarms[0]?.id).toBe('local-focus');
 
         localStorage.setItem('focusAlarms', '[]');
@@ -564,7 +562,7 @@ describe('native persistence', () => {
         await importAllData(
             makeEnvelope({
                 focusAlarms: [{ id: 'old-focus', time: '08:00', active: true }],
-                settings: { theme: 'dark', adaptiveColor: '#123456' },
+                settings: { theme: 'nord', adaptiveColor: '#123456' },
             }),
         );
         localStorage.setItem('focusAlarms', JSON.stringify([{ id: 'stale-local', time: '09:00', active: true }]));
@@ -573,13 +571,13 @@ describe('native persistence', () => {
             makeEnvelope({
                 days: [],
                 focusAlarms: [],
-                settings: { theme: 'material-light', adaptiveColor: null },
+                settings: { theme: 'sepia', adaptiveColor: null },
             }),
         );
 
         const envelope = await exportBackup();
         expect(envelope.focusAlarms).toEqual([]);
-        expect(envelope.settings).toEqual({ theme: 'material-light', adaptiveColor: null });
+        expect(envelope.settings).toEqual({ theme: 'sepia', adaptiveColor: null });
     });
 
     it('falls back to a direct native write when atomic rename is unavailable', async () => {
@@ -870,13 +868,13 @@ describe('localStorage overlay resilience', () => {
 
     it('keeps the canonical settings when the local theme overlay is not a known theme', async () => {
         nativeState.fileData = JSON.stringify(
-            makeEnvelope({ days: [], settings: { theme: 'material-dark', adaptiveColor: '#112233' } }),
+            makeEnvelope({ days: [], settings: { theme: 'nord', adaptiveColor: '#112233' } }),
         );
         localStorage.setItem('theme', 'neon-hacker');
 
         const envelope = await exportBackup();
 
-        expect(envelope.settings).toEqual({ theme: 'material-dark', adaptiveColor: '#112233' });
+        expect(envelope.settings).toEqual({ theme: 'nord', adaptiveColor: '#112233' });
     });
 
     it('judges every component overlay field on its own', async () => {
@@ -884,28 +882,28 @@ describe('localStorage overlay resilience', () => {
         // unusable value in one used to suppress the others' valid values, because all three were
         // validated together behind a single guard.
         nativeState.fileData = JSON.stringify(
-            makeEnvelope({ days: [], settings: { theme: 'material-dark', adaptiveColor: '#112233' } }),
+            makeEnvelope({ days: [], settings: { theme: 'nord', adaptiveColor: '#112233' } }),
         );
         localStorage.setItem('focusAlarms', '{not-json');
         localStorage.setItem('theme', 'neon-hacker');
         localStorage.setItem('adaptive-color', '#445566');
 
-        expect((await exportBackup()).settings).toEqual({ theme: 'material-dark', adaptiveColor: '#445566' });
+        expect((await exportBackup()).settings).toEqual({ theme: 'nord', adaptiveColor: '#445566' });
     });
 
     it('ignores an unusable overlay field without resetting the stored one', async () => {
         nativeState.fileData = JSON.stringify(
-            makeEnvelope({ days: [], settings: { theme: 'material-dark', adaptiveColor: '#112233' } }),
+            makeEnvelope({ days: [], settings: { theme: 'nord', adaptiveColor: '#112233' } }),
         );
-        localStorage.setItem('theme', 'auto');
+        localStorage.setItem('theme', 'daylight');
         localStorage.setItem('adaptive-color', 'not-a-colour');
 
-        expect((await exportBackup()).settings).toEqual({ theme: 'auto', adaptiveColor: '#112233' });
+        expect((await exportBackup()).settings).toEqual({ theme: 'daylight', adaptiveColor: '#112233' });
     });
 
     it('keeps a valid focus overlay alongside unusable settings overlays', async () => {
         nativeState.fileData = JSON.stringify(
-            makeEnvelope({ days: [], settings: { theme: 'material-dark', adaptiveColor: '#112233' } }),
+            makeEnvelope({ days: [], settings: { theme: 'nord', adaptiveColor: '#112233' } }),
         );
         localStorage.setItem('focusAlarms', JSON.stringify([{ id: 'still-read', time: '06:00', active: true }]));
         localStorage.setItem('theme', 'neon-hacker');
@@ -913,12 +911,12 @@ describe('localStorage overlay resilience', () => {
 
         const envelope = await exportBackup();
         expect(envelope.focusAlarms[0]?.id).toBe('still-read');
-        expect(envelope.settings).toEqual({ theme: 'material-dark', adaptiveColor: '#112233' });
+        expect(envelope.settings).toEqual({ theme: 'nord', adaptiveColor: '#112233' });
     });
 
     it('still quarantines a genuinely corrupt canonical backup', async () => {
         nativeState.fileData =
-            '{"schemaVersion":1,"exportedAt":"not-a-timestamp","days":[],"recurringSubjects":[],"todos":[],"focusAlarms":[],"settings":{"theme":"light","adaptiveColor":null}}';
+            '{"schemaVersion":1,"exportedAt":"not-a-timestamp","days":[],"recurringSubjects":[],"todos":[],"focusAlarms":[],"settings":{"theme":"midnight","adaptiveColor":null}}';
 
         await expect(loadFromNativeStorage('2026-09-25')).rejects.toThrow(/preserved/i);
         expect(nativeFs.rename).toHaveBeenCalledWith(
@@ -928,7 +926,7 @@ describe('localStorage overlay resilience', () => {
 
     it('still quarantines a corrupt canonical backup when localStorage is unusable', async () => {
         nativeState.fileData =
-            '{"schemaVersion":1,"exportedAt":"not-a-timestamp","days":[],"recurringSubjects":[],"todos":[],"focusAlarms":[],"settings":{"theme":"light","adaptiveColor":null}}';
+            '{"schemaVersion":1,"exportedAt":"not-a-timestamp","days":[],"recurringSubjects":[],"todos":[],"focusAlarms":[],"settings":{"theme":"midnight","adaptiveColor":null}}';
         vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
             throw new DOMException('storage is disabled', 'SecurityError');
         });
@@ -948,7 +946,7 @@ describe('localStorage overlay resilience', () => {
         const envelope = await exportBackup();
 
         expect(envelope.recurringSubjects[0]?.id).toBe(5);
-        expect(envelope.settings).toEqual({ theme: 'light', adaptiveColor: null });
+        expect(envelope.settings).toEqual({ theme: 'midnight', adaptiveColor: null });
     });
 });
 
@@ -956,11 +954,11 @@ describe('import conflict policies', () => {
     it('does not let the keep policy overwrite conflicting days or global data', async () => {
         await importAllData(
             makeEnvelope({
-                days: [makeDay({ updatedAt: '2026-09-25T10:00:00.000Z', dayRating: 'Current' })],
+                days: [makeDay({ updatedAt: '2026-09-25T01:00:00.000Z', dayRating: 'Current' })],
                 todos: [{ id: 1, text: 'Current todo', completed: false, time: '', reminder: false }],
                 focusAlarms: [{ id: 'current-alarm', time: '06:00', active: true }],
                 recurringSubjects: [makeRecurringSubject({ id: 1, name: 'Current template' })],
-                settings: { theme: 'dark', adaptiveColor: null },
+                settings: { theme: 'nord', adaptiveColor: null },
             }),
         );
 
@@ -970,7 +968,7 @@ describe('import conflict policies', () => {
                 todos: [{ id: 2, text: 'Incoming todo', completed: true, time: '', reminder: false }],
                 focusAlarms: [{ id: 'incoming-alarm', time: '07:00', active: false }],
                 recurringSubjects: [makeRecurringSubject({ id: 2, name: 'Incoming template' })],
-                settings: { theme: 'material-light', adaptiveColor: '#654321' },
+                settings: { theme: 'sepia', adaptiveColor: '#654321' },
             }),
             'keep',
         );
@@ -981,7 +979,7 @@ describe('import conflict policies', () => {
         expect(envelope.todos[0]?.text).toBe('Current todo');
         expect(envelope.focusAlarms[0]?.id).toBe('current-alarm');
         expect(envelope.recurringSubjects[0]?.name).toBe('Current template');
-        expect(envelope.settings).toEqual({ theme: 'dark', adaptiveColor: null });
+        expect(envelope.settings).toEqual({ theme: 'nord', adaptiveColor: null });
     });
 
     it('still adds brand new days under the keep policy', async () => {
@@ -991,20 +989,20 @@ describe('import conflict policies', () => {
     });
 
     it('still applies global data for the newest policy', async () => {
-        await importAllData(makeEnvelope({ days: [], todos: [], settings: { theme: 'dark', adaptiveColor: null } }));
+        await importAllData(makeEnvelope({ days: [], todos: [], settings: { theme: 'nord', adaptiveColor: null } }));
 
         await importAllData(
             makeEnvelope({
                 days: [],
                 todos: [{ id: 2, text: 'Incoming todo', completed: false, time: '', reminder: false }],
-                settings: { theme: 'material-light', adaptiveColor: null },
+                settings: { theme: 'sepia', adaptiveColor: null },
             }),
             'newest',
         );
 
         const envelope = await exportBackup();
         expect(envelope.todos[0]?.text).toBe('Incoming todo');
-        expect(envelope.settings.theme).toBe('material-light');
+        expect(envelope.settings.theme).toBe('sepia');
     });
 });
 
@@ -1046,7 +1044,7 @@ describe('global section recency stamps', () => {
             makeEnvelope({
                 days: [],
                 todos: [{ id: 1, text: 'Current todo', completed: false, time: '', reminder: false }],
-                settings: { theme: 'dark', adaptiveColor: null },
+                settings: { theme: 'nord', adaptiveColor: null },
                 globalStamps: { todos: NEWER, settings: OLDER },
             }),
         );
@@ -1055,7 +1053,7 @@ describe('global section recency stamps', () => {
             makeEnvelope({
                 days: [],
                 todos: [{ id: 2, text: 'Stale todo', completed: false, time: '', reminder: false }],
-                settings: { theme: 'material-light', adaptiveColor: null },
+                settings: { theme: 'sepia', adaptiveColor: null },
                 globalStamps: { todos: OLDER, settings: NEWER },
             }),
             'newest',
@@ -1063,7 +1061,7 @@ describe('global section recency stamps', () => {
 
         const envelope = await exportBackup();
         // Decided independently: the theme moves, the todo list does not.
-        expect(envelope.settings.theme).toBe('material-light');
+        expect(envelope.settings.theme).toBe('sepia');
         expect(envelope.todos[0]?.text).toBe('Current todo');
         // The store keeps the recency it now has, per section.
         expect(envelope.globalStamps).toEqual({ todos: NEWER, settings: NEWER });
@@ -1078,7 +1076,7 @@ describe('global section recency stamps', () => {
             makeEnvelope({
                 days: [],
                 todos: [{ id: 1, text: 'Current todo', completed: false, time: '', reminder: false }],
-                settings: { theme: 'dark', adaptiveColor: null },
+                settings: { theme: 'nord', adaptiveColor: null },
                 globalStamps: { todos: NEWER, settings: NEWER },
             }),
         );
@@ -1092,12 +1090,12 @@ describe('global section recency stamps', () => {
             recurringSubjects: [],
             todos: [{ id: 2, text: 'Unstamped todo', completed: false, time: '', reminder: false }],
             focusAlarms: [],
-            settings: { theme: 'material-dark', adaptiveColor: null },
+            settings: { theme: 'sepia', adaptiveColor: null },
         });
 
         const envelope = await exportBackup();
         expect(envelope.todos[0]?.text).toBe('Current todo');
-        expect(envelope.settings.theme).toBe('dark');
+        expect(envelope.settings.theme).toBe('nord');
         // The store keeps the recency it had; the rejected import does not replace
         // it with a timestamp for a value that was never written.
         expect(envelope.globalStamps).toEqual({ todos: NEWER, settings: NEWER });
@@ -1121,7 +1119,7 @@ describe('global section recency stamps', () => {
             recurringSubjects: [],
             todos: [{ id: 2, text: 'Restored todo', completed: false, time: '', reminder: false }],
             focusAlarms: [],
-            settings: { theme: 'light', adaptiveColor: null },
+            settings: { theme: 'midnight', adaptiveColor: null },
         });
 
         expect((await exportBackup()).todos[0]?.text).toBe('Restored todo');
@@ -1203,7 +1201,7 @@ describe('global section recency stamps', () => {
     });
 
     it('round-trips the stamps through an export and a re-import', async () => {
-        await saveSettings({ theme: 'material-dark', adaptiveColor: '#0a0b0c' });
+        await saveSettings({ theme: 'nord', adaptiveColor: '#0a0b0c' });
         const exported = await exportBackup();
         expect(exported.globalStamps.settings).toBeTypeOf('string');
 
@@ -1213,7 +1211,7 @@ describe('global section recency stamps', () => {
         expect(await importAllData(JSON.parse(JSON.stringify(exported)))).toBe(0);
         const reimported = await exportBackup();
         expect(reimported.globalStamps.settings).toBe(exported.globalStamps.settings);
-        expect(reimported.settings).toEqual({ theme: 'material-dark', adaptiveColor: '#0a0b0c' });
+        expect(reimported.settings).toEqual({ theme: 'nord', adaptiveColor: '#0a0b0c' });
     });
 
     it('rejects a stamp that is present but not a timestamp', async () => {
@@ -1300,7 +1298,7 @@ describe('restore size and legacy bounds', () => {
             recurringSubjects: [],
             todos: [],
             focusAlarms: [],
-            settings: { theme: 'light', adaptiveColor: null },
+            settings: { theme: 'midnight', adaptiveColor: null },
         });
 
         await expect(loadFromNativeStorage('2000-01-02')).rejects.toThrow(/invalid array at native\.days/i);
@@ -1430,18 +1428,18 @@ describe('web platform mirror', () => {
             { id: 1, text: 'canonical todo', completed: false, time: '', reminder: false },
         ]);
         expect(await web.loadRecurringSubjects()).toEqual([]);
-        expect(await web.loadSettings()).toEqual({ theme: 'light', adaptiveColor: null });
+        expect(await web.loadSettings()).toEqual({ theme: 'midnight', adaptiveColor: null });
     });
 
     it('keeps the stored settings when the local theme overlay is not a known theme', async () => {
         const web = await importWebStorage();
-        await web.saveSettings({ theme: 'material-dark', adaptiveColor: '#112233' });
+        await web.saveSettings({ theme: 'nord', adaptiveColor: '#112233' });
         // Key presence alone must not decide authority: a value this build cannot interpret is
         // the same as the component never having written it.
         localStorage.setItem('theme', 'neon-hacker');
         localStorage.setItem('adaptive-color', '#445566');
 
-        expect(await web.loadSettings()).toEqual({ theme: 'material-dark', adaptiveColor: '#445566' });
+        expect(await web.loadSettings()).toEqual({ theme: 'nord', adaptiveColor: '#445566' });
     });
 
     it('reports success for a web save even when the mirror write is rejected', async () => {
@@ -1551,7 +1549,7 @@ describe('schema versioning and legacy migration', () => {
             __recurring_subjects: [makeRecurringSubject({ id: 7, name: 'Physics' })],
             __global_todos: [{ id: 1, text: 'legacy todo', completed: false, time: '', reminder: false }],
             __focus_alarms: [{ id: 'legacy-focus', time: '05:30', active: true }],
-            __settings: { theme: 'material-dark', adaptiveColor: '#0a0b0c' },
+            __settings: { theme: 'nord', adaptiveColor: '#0a0b0c' },
         });
 
         const envelope = await exportBackup();
@@ -1559,7 +1557,7 @@ describe('schema versioning and legacy migration', () => {
         expect(envelope.recurringSubjects[0]?.id).toBe(7);
         expect(envelope.todos[0]?.text).toBe('legacy todo');
         expect(envelope.focusAlarms[0]?.id).toBe('legacy-focus');
-        expect(envelope.settings).toEqual({ theme: 'material-dark', adaptiveColor: '#0a0b0c' });
+        expect(envelope.settings).toEqual({ theme: 'nord', adaptiveColor: '#0a0b0c' });
         expect(quarantineTargets()).toEqual([]);
     });
 
@@ -1584,7 +1582,7 @@ describe('schema versioning and legacy migration', () => {
         ]);
         expect(stored.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
         expect(stored.globalStamps).toEqual({});
-        expect(stored.settings).toEqual({ theme: 'light', adaptiveColor: null });
+        expect(stored.settings).toEqual({ theme: 'midnight', adaptiveColor: null });
         expect(stored.todos).toEqual([]);
         expect(stored.focusAlarms).toEqual([]);
         expect(stored.recurringSubjects).toEqual([]);
@@ -1767,14 +1765,14 @@ describe('envelope completeness and field rules', () => {
             /invalid string/i,
         );
 
-        expect(() => validateBackup(makeEnvelope({ settings: { theme: 'light', adaptiveColor: '#abc' } }))).toThrow(
+        expect(() => validateBackup(makeEnvelope({ settings: { theme: 'midnight', adaptiveColor: '#abc' } }))).toThrow(
             /invalid adaptive color/i,
         );
         expect(() =>
-            validateBackup(makeEnvelope({ settings: { theme: 'auto', adaptiveColor: '#ABCDEF' } })),
+            validateBackup(makeEnvelope({ settings: { theme: 'nord', adaptiveColor: '#ABCDEF' } })),
         ).not.toThrow();
         expect(() =>
-            validateBackup(makeEnvelope({ settings: { theme: 'auto' } as unknown as BackupSettings })),
+            validateBackup(makeEnvelope({ settings: { theme: 'nord' } as unknown as BackupSettings })),
         ).toThrow(/missing key adaptivecolor/i);
     });
 
@@ -1893,7 +1891,7 @@ describe('import conflict policy and overlay authority', () => {
                 todos: [{ id: 1, text: 'Current todo', completed: false, time: '', reminder: false }],
                 recurringSubjects: [makeRecurringSubject({ id: 1, name: 'Current template' })],
                 focusAlarms: [{ id: 'current-alarm', time: '06:00', active: true }],
-                settings: { theme: 'dark', adaptiveColor: null },
+                settings: { theme: 'nord', adaptiveColor: null },
             }),
         );
 
@@ -1904,7 +1902,7 @@ describe('import conflict policy and overlay authority', () => {
         expect(envelope.todos[0]?.text).toBe('Current todo');
         expect(envelope.recurringSubjects[0]?.name).toBe('Current template');
         expect(envelope.focusAlarms[0]?.id).toBe('current-alarm');
-        expect(envelope.settings).toEqual({ theme: 'dark', adaptiveColor: null });
+        expect(envelope.settings).toEqual({ theme: 'nord', adaptiveColor: null });
     });
 
     it('replaces global data as well as days for the replace policy', async () => {
@@ -1912,7 +1910,7 @@ describe('import conflict policy and overlay authority', () => {
             makeEnvelope({
                 days: [makeDay({ updatedAt: '2026-09-25T23:00:00.000Z', dayRating: 'Current' })],
                 todos: [{ id: 1, text: 'Current todo', completed: false, time: '', reminder: false }],
-                settings: { theme: 'dark', adaptiveColor: null },
+                settings: { theme: 'nord', adaptiveColor: null },
             }),
         );
 
@@ -1921,7 +1919,7 @@ describe('import conflict policy and overlay authority', () => {
                 makeEnvelope({
                     days: [makeDay({ updatedAt: '2026-09-25T01:00:00.000Z', dayRating: 'Incoming' })],
                     todos: [{ id: 2, text: 'Incoming todo', completed: true, time: '', reminder: false }],
-                    settings: { theme: 'material-light', adaptiveColor: '#654321' },
+                    settings: { theme: 'sepia', adaptiveColor: '#654321' },
                 }),
                 'replace',
             ),
@@ -1930,7 +1928,7 @@ describe('import conflict policy and overlay authority', () => {
         const envelope = await exportBackup();
         expect(envelope.days[0]?.dayRating).toBe('Incoming');
         expect(envelope.todos[0]?.text).toBe('Incoming todo');
-        expect(envelope.settings).toEqual({ theme: 'material-light', adaptiveColor: '#654321' });
+        expect(envelope.settings).toEqual({ theme: 'sepia', adaptiveColor: '#654321' });
     });
 
     it('ignores a stale component overlay once after a restore, then honours it', async () => {
@@ -1971,8 +1969,8 @@ describe('storage fault isolation', () => {
             throw new DOMException('denied', 'SecurityError');
         });
 
-        await expect(saveSettings({ theme: 'dark', adaptiveColor: null })).resolves.toBe(true);
-        expect(readStoredEnvelope().settings).toEqual({ theme: 'dark', adaptiveColor: null });
+        await expect(saveSettings({ theme: 'nord', adaptiveColor: null })).resolves.toBe(true);
+        expect(readStoredEnvelope().settings).toEqual({ theme: 'nord', adaptiveColor: null });
     });
 
     it('reports a corrupt app-owned mirror key instead of treating it as corrupt canonical data', async () => {

@@ -292,20 +292,22 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                         key={todo.id}
                         className="group flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-app-border bg-app-surface p-3 sm:p-4 shadow-sm transition-all hover:border-app-primary/30"
                     >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
                             <button
                                 type="button"
                                 onClick={() => void toggleTodo(todo.id)}
                                 aria-label={`Mark "${todo.text}" as done`}
                                 disabled={pendingIds.includes(todo.id)}
-                                className="text-app-text-muted hover:text-app-primary transition-colors shrink-0 disabled:opacity-50"
+                                className="text-app-text-muted hover:text-app-primary transition-colors shrink-0 disabled:opacity-50 mt-0.5"
                             >
                                 <Square size={20} aria-hidden="true" />
                             </button>
-                            <span className="text-sm sm:text-base text-app-text-main truncate">{todo.text}</span>
+                            <span className="text-sm sm:text-base text-app-text-main break-words whitespace-normal [overflow-wrap:anywhere]">
+                                {todo.text}
+                            </span>
                         </div>
 
-                        <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-auto ml-auto sm:ml-0">
+                        <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-auto ml-auto sm:ml-0 shrink-0">
                             <div className="w-auto shrink-0">
                                 <TimePicker
                                     value={todo.time}
@@ -319,7 +321,7 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                                 aria-label={
                                     todo.reminder ? `Cancel reminder for ${todo.text}` : `Set reminder for ${todo.text}`
                                 }
-                                className={`p-1.5 rounded-full transition-colors disabled:opacity-50 ${
+                                className={`p-1.5 rounded-full transition-colors disabled:opacity-50 shrink-0 ${
                                     todo.reminder
                                         ? 'bg-app-accent-warning text-app-bg hover:bg-app-accent-warning/90'
                                         : 'text-app-text-muted hover:bg-app-bg hover:text-app-primary'
@@ -337,7 +339,7 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                                 onClick={() => void deleteTodo(todo.id)}
                                 disabled={pendingIds.includes(todo.id)}
                                 aria-label={`Delete task ${todo.text}`}
-                                className="text-app-text-muted hover:text-app-accent-error p-1.5 rounded-lg transition-all focus:opacity-100 disabled:opacity-50"
+                                className="text-app-text-muted hover:text-app-accent-error p-1.5 rounded-lg transition-all focus:opacity-100 disabled:opacity-50 shrink-0"
                                 title="Delete"
                             >
                                 <Trash2 size={18} aria-hidden="true" />
@@ -360,19 +362,19 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                 {completedTodos.map((todo) => (
                     <div
                         key={todo.id}
-                        className="group flex items-center justify-between rounded-xl border border-app-border/50 bg-app-bg/50 p-3 sm:p-4 transition-all opacity-70 hover:opacity-100"
+                        className="group flex items-start sm:items-center justify-between gap-3 rounded-xl border border-app-border/50 bg-app-bg/50 p-3 sm:p-4 transition-all opacity-70 hover:opacity-100"
                     >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
                             <button
                                 type="button"
                                 onClick={() => void toggleTodo(todo.id)}
                                 aria-label={`Mark "${todo.text}" as not done`}
                                 disabled={pendingIds.includes(todo.id)}
-                                className="text-app-primary transition-colors shrink-0 disabled:opacity-50"
+                                className="text-app-primary transition-colors shrink-0 disabled:opacity-50 mt-0.5"
                             >
                                 <CheckSquare size={20} aria-hidden="true" />
                             </button>
-                            <span className="text-sm sm:text-base text-app-text-muted line-through truncate decoration-app-text-muted/50">
+                            <span className="text-sm sm:text-base text-app-text-muted line-through break-words whitespace-normal [overflow-wrap:anywhere] decoration-app-text-muted/50">
                                 {todo.text}
                             </span>
                         </div>
@@ -381,7 +383,7 @@ const TodoPage = ({ todos, setTodos }: TodoPageProps) => {
                             onClick={() => void deleteTodo(todo.id)}
                             disabled={pendingIds.includes(todo.id)}
                             aria-label={`Delete task ${todo.text}`}
-                            className="text-app-text-muted hover:text-app-accent-error p-2 rounded-lg opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                            className="text-app-text-muted hover:text-app-accent-error p-2 rounded-lg opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 shrink-0"
                             title="Delete"
                         >
                             <Trash2 size={16} aria-hidden="true" />
