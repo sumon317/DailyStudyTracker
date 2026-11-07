@@ -2,42 +2,20 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportHeight="108"
-    android:viewportWidth="108">
-
-    <!-- Soft Drop Shadow for Depth -->
-    <path
-        android:fillColor="#1A000000"
-        android:pathData="M32,74 C32,74 45,66 54,66 C63,66 76,74 76,74 L76,78 C76,79.1 75.1,80 74,80 L34,80 C32.9,80 32,79.1 32,78 Z" />
-
-    <!-- Open Book Base (White) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,32 C44,32 30,36 24,40 L24,76 C30,72 44,68 54,68 C64,68 78,72 84,76 L84,40 C78,36 64,32 54,32 Z" />
-
-    <!-- Book Spine Shadow -->
-    <path
-        android:strokeColor="#E2E8F0"
-        android:strokeWidth="2"
-        android:pathData="M54,32 L54,68" />
-
-    <!-- Left Page Ruled Lines -->
-    <path
-        android:strokeColor="#CBD5E1"
-        android:strokeWidth="2.5"
-        android:pathData="M32,44 L46,44 M32,52 L46,52 M32,60 L40,60" />
-
-    <!-- Right Page Study Checkmark Badge -->
-    <path
-        android:fillColor="#10B981"
-        android:pathData="M68,42 A10,10 0 1,1 68,62 A10,10 0 1,1 68,42 Z" />
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:pathData="M63,52 L66,55 L73,48" />
-
-    <!-- Top Focus Sparkle / Star -->
-    <path
-        android:fillColor="#FBBF24"
-        android:pathData="M54,18 L56.2,23.8 L62,26 L56.2,28.2 L54,34 L51.8,28.2 L46,26 L51.8,23.8 Z" />
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#1D000000" android:pathData="M29,84 C39,79 69,79 79,84 L79,88 L29,88 Z" />
+    <path android:fillColor="#F8F7FF" android:pathData="M27,25 H81 C85.4,25 89,28.6 89,33 V78 C89,82.4 85.4,86 81,86 H27 C22.6,86 19,82.4 19,78 V33 C19,28.6 22.6,25 27,25 Z" />
+    <path android:fillColor="#7064E8" android:pathData="M19,34 C19,29 23,25 28,25 H80 C85,25 89,29 89,34 V47 H19 Z" />
+    <path android:strokeColor="#F8F7FF" android:strokeWidth="3.5" android:strokeLineCap="round" android:pathData="M37,18 V31 M71,18 V31" />
+    <path android:strokeColor="#BEB8FF" android:strokeWidth="1.5" android:strokeLineCap="round" android:pathData="M37,18 V25 M71,18 V25" />
+    <path android:fillColor="#E9E7FA" android:pathData="M28,54 H41 C43,54 44,55 44,57 V65 C44,67 43,68 41,68 H28 C26,68 25,67 25,65 V57 C25,55 26,54 28,54 Z" />
+    <path android:fillColor="#E9E7FA" android:pathData="M48,54 H61 C63,54 64,55 64,57 V65 C64,67 63,68 61,68 H48 C46,68 45,67 45,65 V57 C45,55 46,54 48,54 Z" />
+    <path android:fillColor="#E9E7FA" android:pathData="M68,54 H81 C83,54 84,55 84,57 V65 C84,67 83,68 81,68 H68 C66,68 65,67 65,65 V57 C65,55 66,54 68,54 Z" />
+    <path android:fillColor="#E9E7FA" android:pathData="M28,72 H41 C43,72 44,73 44,75 V79 C44,81 43,82 41,82 H28 C26,82 25,81 25,79 V75 C25,73 26,72 28,72 Z" />
+    <path android:fillColor="#E9E7FA" android:pathData="M48,72 H61 C63,72 64,73 64,75 V79 C64,81 63,82 61,82 H48 C46,82 45,81 45,79 V75 C45,73 46,72 48,72 Z" />
+    <path android:fillColor="#E9E7FA" android:pathData="M68,72 H81 C83,72 84,73 84,75 V79 C84,81 83,82 81,82 H68 C66,82 65,81 65,79 V75 C65,73 66,72 68,72 Z" />
+    <path android:strokeColor="#20A77A" android:strokeWidth="2.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28,60 L32,64 L40,56 M48,60 L52,64 L60,56 M68,60 L72,64 L80,56" />
+    <path android:strokeColor="#20A77A" android:strokeWidth="2.4" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28,76 L32,80 L40,72 M48,76 L52,80 L60,72" />
+    <path android:fillColor="#F0B45B" android:pathData="M73,75 A2.5,2.5 0 1,0 78,75 A2.5,2.5 0 1,0 73,75 Z" />
 </vector>

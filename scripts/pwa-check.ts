@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileSize, pngSize, readText, runCheck, walkFiles } from './lib/io';
+import { fileSize, jpegSize, pngSize, readText, runCheck, walkFiles } from './lib/io';
 
 /**
  * PWA output gate.
@@ -51,7 +51,7 @@ await runCheck('PWA output check', async () => {
         }
 
         const manifest = (await Bun.file('dist/manifest.webmanifest').json()) as {
-            icons?: Array<{ src: string; sizes?: string }>;
+            icons?: Array<{ src: string; sizes?: string; type?: string; purpose?: string }>;
             start_url?: string;
             scope?: string;
             shortcuts?: Array<{ url?: string }>;
@@ -69,15 +69,21 @@ await runCheck('PWA output check', async () => {
                 problems.push(`Manifest icon missing from dist: ${icon.src}`);
                 continue;
             }
-            const declared = /^([0-9]+)x([0-9]+)$/.exec(icon.sizes ?? '');
-            if (declared && icon.src.endsWith('.png')) {
-                const size = pngSize(file);
-                if (!size) {
-                    problems.push(`${icon.src} is not a readable PNG`);
-                } else if (size.width !== Number(declared[1]) || size.height !== Number(declared[2])) {
-                    problems.push(
-                        `${icon.src} is ${size.width}x${size.height} but the manifest declares ${icon.sizes}`,
-                    );
+            if (icon.src.endsWith('.svg')) {
+                if (icon.sizes !== 'any' || icon.type !== 'image/svg+xml') {
+                    problems.push(`${icon.src} must declare sizes="any" and type="image/svg+xml"`);
+                }
+            } else {
+                const declared = /^([0-9]+)x([0-9]+)$/.exec(icon.sizes ?? '');
+                if (declared && /\.(png|jpe?g)$/.test(icon.src)) {
+                    const size = icon.src.endsWith('.png') ? pngSize(file) : jpegSize(file);
+                    if (!size) {
+                        problems.push(`${icon.src} is not a readable image`);
+                    } else if (size.width !== Number(declared[1]) || size.height !== Number(declared[2])) {
+                        problems.push(
+                            `${icon.src} is ${size.width}x${size.height} but the manifest declares ${icon.sizes}`,
+                        );
+                    }
                 }
             }
         }
@@ -111,18 +117,18 @@ await runCheck('PWA output check', async () => {
 
         /**
          * The plugin injects the manifest and its own icon entries into the precache manifest
-         * *and* `workbox.globPatterns` matches the same five URLs, so each of them appears
+         * *and* `workbox.globPatterns` matches the same three URLs, so each of them appears
          * exactly twice. Both copies carry the same revision and workbox keys the precache by
          * URL, so the overlap is harmless. Excluding them with `globIgnores` was tried and
          * reverted: it removes the plugin-injected entries too, which silently dropped the
-         * manifest and all four icons from the offline cache.
+         * manifest and its icon entries from the offline cache.
          */
         const duplicated = new Map<string, number>();
         for (const url of precached) {
             duplicated.set(url, (duplicated.get(url) ?? 0) + 1);
         }
         for (const [url, count] of duplicated) {
-            const injectedByPlugin = url === 'manifest.webmanifest' || /^assets\/pwa-[^/]*\.png$/.test(url);
+            const injectedByPlugin = url === 'manifest.webmanifest' || /^assets\/pwa-[^/]*\.(?:png|jpe?g|svg)$/.test(url);
             if (count > 2 || (count > 1 && !injectedByPlugin)) {
                 problems.push(`Duplicate precache entries: ${url} appears ${count} times`);
             }

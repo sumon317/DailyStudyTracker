@@ -48,34 +48,22 @@ export default defineConfig({
                 start_url: '/',
                 scope: '/',
                 display: 'standalone',
-                background_color: '#f7f9fc',
-                theme_color: '#0062a0',
+                background_color: '#0A122F',
+                theme_color: '#0A122F',
                 orientation: 'any',
                 categories: ['education', 'productivity'],
                 icons: [
                     {
-                        src: '/assets/pwa-192x192.png',
+                        src: '/assets/pwa-192x192.jpg',
                         sizes: '192x192',
-                        type: 'image/png',
+                        type: 'image/jpeg',
                         purpose: 'any',
                     },
                     {
-                        src: '/assets/pwa-512x512.png',
-                        sizes: '512x512',
-                        type: 'image/png',
+                        src: '/assets/pwa-512x512.svg',
+                        sizes: 'any',
+                        type: 'image/svg+xml',
                         purpose: 'any',
-                    },
-                    {
-                        src: '/assets/pwa-192x192-maskable.png',
-                        sizes: '192x192',
-                        type: 'image/png',
-                        purpose: 'maskable',
-                    },
-                    {
-                        src: '/assets/pwa-512x512-maskable.png',
-                        sizes: '512x512',
-                        type: 'image/png',
-                        purpose: 'maskable',
                     },
                 ],
                 shortcuts: [
@@ -83,13 +71,13 @@ export default defineConfig({
                         name: 'Open focus timer',
                         short_name: 'Focus',
                         url: '/focus',
-                        icons: [{ src: '/assets/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+                        icons: [{ src: '/assets/pwa-192x192.jpg', sizes: '192x192', type: 'image/jpeg' }],
                     },
                     {
                         name: 'Open todos',
                         short_name: 'Todos',
                         url: '/todo',
-                        icons: [{ src: '/assets/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+                        icons: [{ src: '/assets/pwa-192x192.jpg', sizes: '192x192', type: 'image/jpeg' }],
                     },
                 ],
             },
@@ -106,7 +94,7 @@ export default defineConfig({
                 // At ~1.4 MiB it stays well under maximumFileSizeToCacheInBytes; a
                 // larger encode would silently drop out of the precache manifest,
                 // so `bun run pwa:check` guards the served copy existing.
-                globPatterns: ['**/*.{html,js,css,ico,png,svg,webmanifest,mp3}'],
+                globPatterns: ['**/*.{html,js,css,ico,png,jpg,svg,webmanifest,mp3}'],
                 // vite-plugin-pwa adds the generated manifest and its own icon entries to the
                 // precache manifest itself, so globPatterns matches them a second time. Duplicates
                 // are harmless (identical revision, workbox dedupes by key), whereas excluding them

@@ -121,7 +121,7 @@ Run `bun audit --audit-level=high` to audit installed dependencies. High and cri
 
 `assets:check` and `pwa:check` are the two asset gates. `assets:check` runs before a build and reads only committed sources, so it is safe to run at any time. `pwa:check` requires `dist/` and therefore runs after `bun run build`. Both are part of `bun run verify` and run in CI.
 
-`assets:check` fails on a referenced asset that is missing, empty, or whose PNG dimensions disagree with its filename. An *unreferenced* file in `public/` is only reported as a warning. Four files are warned about today: `public/assets/blue_tang.png`, `clownfish.png`, `seaweed.png`, and `yellow_tang.png`. They are the source artwork the app icons were generated from and nothing in the app references them; because `workbox.globPatterns` matches `png`, they are copied into `dist/` and precached anyway, which is about 36 KB per install. Remove them if the artwork is not being kept for icon regeneration.
+`assets:check` fails on a referenced asset that is missing, empty, or whose PNG dimensions disagree with its filename. An *unreferenced* file in `public/` is only reported as a warning. The old fish artwork and launcher PNGs are no longer shipped; the study-planner icon assets are the only launcher artwork included in the PWA build.
 
 Coverage thresholds are global regression floors. The suite currently measures about 93% of statements and lines, 86% of branches and 93% of functions, and the floor is set below those numbers so a change that drops a meaningful amount of coverage fails CI without blocking a contributor who adds a feature with tests. Coverage output is written to `coverage/` and is not committed.
 
@@ -149,7 +149,7 @@ Alarm audio is a single asset, `public/alarm_loop.mp3` (~1.4 MiB), and it **is**
 
 A second, larger `public/alarm_loop_small.mp3` used to be referenced by the web alarm alongside `public/alarm_loop.mp3`. Despite the name it was twice the size of the file it shadowed, so the web alarm was downloading the larger asset and the offline story was broken. It has been removed in favour of the single canonical `alarm_loop.mp3`. If the tone is ever re-encoded, keep it under the precache budget or `pwa:check` / the workbox build will silently drop it from the offline cache.
 
-To test installation and update behavior, serve the production build from HTTPS or from `localhost`, load it once, and use the browser's install and application controls. The checked-in 192 px and 512 px maskable icons and favicon are generated from the existing fish artwork, and `bun run assets:check` verifies that every declared size matches the actual PNG dimensions.
+To test installation and update behavior, serve the production build from HTTPS or from `localhost`, load it once, and use the browser's install and application controls. The PWA uses the new study-planner artwork in 192 px JPEG and scalable 512 px SVG launcher icons. The browser favicon and Apple touch icon use the same illustration. Android uses a native adaptive calendar-and-progress vector over a midnight background, with a vector fallback for Android 7–7.1. `bun run pwa:check` verifies the declared JPEG dimensions and SVG manifest entry.
 
 ## Project structure
 
